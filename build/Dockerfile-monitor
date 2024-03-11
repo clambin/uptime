@@ -1,0 +1,12 @@
+FROM alpine
+
+WORKDIR /app
+
+ARG TARGETOS
+ARG TARGETARCH
+
+COPY bld/monitor-$TARGETOS-$TARGETARCH /app/monitor
+
+EXPOSE 8080
+ENTRYPOINT ["/app/monitor"]
+CMD []

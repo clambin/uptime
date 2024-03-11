@@ -1,0 +1,25 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - master
+      - workflows
+
+jobs:
+  test:
+    uses: clambin/workflows/.github/workflows/test.yaml@main
+    secrets:
+      codecov-token: ${{ secrets.CODECOV_TOKEN }}
+  build:
+    needs:
+      - test
+    strategy:
+      matrix:
+        cmd:
+          - agent
+          - monitor
+    uses: clambin/workflows/.github/workflows/build.yaml@main
+    with:
+      target: ${{ matrix.cmd }}
+      image: uptime-${{ matrix.cmd }}
