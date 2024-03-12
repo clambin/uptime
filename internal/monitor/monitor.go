@@ -63,6 +63,7 @@ func (m *Monitor) removeTarget(w http.ResponseWriter, r *http.Request) {
 	req, err := ParseRequest(r)
 	if err != nil {
 		l.Error("invalid request", "err", err)
+		w.Header().Set("Content-Type", "plain/text")
 		http.Error(w, "invalid request: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -72,8 +73,6 @@ func (m *Monitor) removeTarget(w http.ResponseWriter, r *http.Request) {
 
 	l.Debug("removing target", "target", req.Target)
 
-	if !m.hostCheckers.Remove(req.Target) {
-		http.Error(w, "no checker running for "+req.Target, http.StatusNotFound)
-	}
+	m.hostCheckers.Remove(req.Target)
 	w.WriteHeader(http.StatusOK)
 }
