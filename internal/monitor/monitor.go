@@ -54,7 +54,7 @@ func (m *Monitor) addTarget(w http.ResponseWriter, r *http.Request) {
 
 	h := NewHostChecker(req.Target, req.Method, m.metrics, m.httpClient, l.With("target", req.Target), req.ValidCode...)
 	m.hostCheckers.Add(req.Target, h, req.Interval)
-	w.WriteHeader(http.StatusOK)
+	//w.WriteHeader(http.StatusOK)
 }
 
 func (m *Monitor) removeTarget(w http.ResponseWriter, r *http.Request) {

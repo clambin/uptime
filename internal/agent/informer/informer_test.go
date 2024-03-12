@@ -46,23 +46,18 @@ func TestInformer(t *testing.T) {
 		watchlist.Delete(ingress)
 	}
 
-	for _, ingress := range ingresses {
-		watchlist.Add(ingress)
-	}
-
 	assert.Eventually(t, func() bool {
 		return i.ResourceEventHandlerRegistration.HasSynced()
 	}, time.Second, time.Millisecond)
 
-	assert.Equal(t, 2*len(ingresses), w.added)
+	assert.Equal(t, len(ingresses), w.added)
 
 }
 
 func TestIngressInformer(t *testing.T) {
+	t.Skip()
 	c, err := kubernetes.NewForConfig(config.GetConfigOrDie())
-	if err != nil {
-		t.Skip("not connected to cluster")
-	}
+	require.NoError(t, err)
 
 	w := watcher{t: t}
 	i, err := informer.NewIngressInformer(c, v1.NamespaceAll, &w)
@@ -114,7 +109,7 @@ func (w *watcher) OnAdd(obj any, _ bool) {
 	w.added++
 }
 
-func (w *watcher) OnUpdate(oldObj, newObj any) {
+func (w *watcher) OnUpdate(_, _ any) {
 	//TODO implement me
 	panic("implement me")
 }

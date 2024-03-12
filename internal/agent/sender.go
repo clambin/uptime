@@ -31,9 +31,9 @@ func (s Sender) Run(ctx context.Context) {
 
 func (s Sender) process(ctx context.Context, ev Event) {
 	waitTime := time.Second
-	l := s.logger.With("target", ev.Host)
+	l := s.logger.With("target", ev.Host, "eventType", ev.Type)
+	l.Debug("sending request")
 	for {
-		l.Debug("sending request")
 		err := s.send(ctx, ev)
 		if err == nil {
 			return
@@ -49,13 +49,13 @@ func (s Sender) makeRequest(ev Event) monitor.Request {
 	return monitor.Request{
 		Target:    ev.Host,
 		Method:    http.MethodGet,
-		ValidCode: []int{http.StatusOK, http.StatusForbidden},
+		ValidCode: []int{http.StatusOK, http.StatusUnauthorized},
 		Interval:  5 * time.Minute,
 	}
 }
 
 func (s Sender) send(ctx context.Context, ev Event) error {
-	r, _ := http.NewRequestWithContext(ctx, getMethod(ev.Type), s.monitor+"?"+s.makeRequest(ev).Encode(), nil)
+	r, _ := http.NewRequestWithContext(ctx, getMethod(ev.Type), s.monitor+"/target?"+s.makeRequest(ev).Encode(), nil)
 	r.Header.Set("Authorization", "Bearer "+s.token)
 	resp, err := s.httpClient.Do(r)
 	if err != nil {

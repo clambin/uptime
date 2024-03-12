@@ -64,17 +64,21 @@ func (h *HostChecker) ping() HTTPMeasurement {
 	start := time.Now()
 	resp, err := h.httpClient.Do(req)
 
-	if err == nil {
-		_ = resp.Body.Close()
-		m.Code = fmt.Sprintf("%03d", resp.StatusCode)
-		if m.Up = h.validCodes.Contains(resp.StatusCode); m.Up {
-			m.Latency = time.Since(start)
-		}
-		if resp.TLS != nil && len(resp.TLS.PeerCertificates) > 0 {
-			m.IsTLS = true
-			m.TLSExpiry = time.Until(resp.TLS.PeerCertificates[0].NotAfter)
-		}
+	if err != nil {
+		h.logger.Debug("measurement made", "result", m, "err", err)
+		return m
 	}
-	h.logger.Debug("measurement made", "result", m)
+
+	_ = resp.Body.Close()
+	m.Code = fmt.Sprintf("%03d", resp.StatusCode)
+	if m.Up = h.validCodes.Contains(resp.StatusCode); m.Up {
+		m.Latency = time.Since(start)
+	}
+	if resp.TLS != nil && len(resp.TLS.PeerCertificates) > 0 {
+		m.IsTLS = true
+		m.TLSExpiry = time.Until(resp.TLS.PeerCertificates[0].NotAfter)
+	}
+
+	h.logger.Debug("measurement made", "result", m, "code", resp.StatusCode)
 	return m
 }

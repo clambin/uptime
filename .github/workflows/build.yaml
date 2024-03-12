@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - master
-      - workflows
+      - fix
 
 jobs:
   test:
@@ -23,3 +23,4 @@ jobs:
     with:
       target: ${{ matrix.cmd }}
       image: uptime-${{ matrix.cmd }}
+      dockerfile: build/Dockerfile-${{ matrix.cmd }}

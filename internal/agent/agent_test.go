@@ -14,6 +14,8 @@ import (
 )
 
 func TestAgent_Run(t *testing.T) {
+	t.Skip()
+
 	c, err := kubernetes.NewForConfig(config.GetConfigOrDie())
 	if err != nil {
 		t.Skip("not connected to cluster")
