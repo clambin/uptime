@@ -26,13 +26,12 @@ func TestMonitor(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 
 	assert.Eventually(t, func() bool {
-		return nil == testutil.CollectAndCompare(metrics, bytes.NewBufferString(`
-# HELP uptime_latency_seconds site latency in seconds
-# TYPE uptime_latency_seconds gauge
-uptime_latency_seconds{code="",host="http://localhost"} 0
+		return testutil.CollectAndCount(metrics) > 0
+	}, time.Second, 20*time.Millisecond)
+
+	assert.NoError(t, testutil.CollectAndCompare(metrics, bytes.NewBufferString(`
 # HELP uptime_up site is up/down
 # TYPE uptime_up gauge
 uptime_up{host="http://localhost"} 0
-`), "uptime_up", "uptime_latency_seconds")
-	}, time.Second, 100*time.Millisecond)
+`), "uptime_up"))
 }

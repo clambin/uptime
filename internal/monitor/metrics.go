@@ -9,18 +9,19 @@ import (
 var _ prometheus.Collector = HTTPMetrics{}
 
 type HTTPMetrics struct {
-	Latency    *prometheus.GaugeVec
+	Latency    *prometheus.HistogramVec
 	Up         *prometheus.GaugeVec
 	CertExpiry *prometheus.GaugeVec
 }
 
 func NewHTTPMetrics(namespace, subsystem string) *HTTPMetrics {
 	return &HTTPMetrics{
-		Latency: prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Latency: prometheus.NewHistogramVec(prometheus.HistogramOpts{
 			Namespace: namespace,
 			Subsystem: subsystem,
-			Name:      "latency_seconds",
-			Help:      "site latency in seconds",
+			Name:      "latency",
+			Help:      "site latency",
+			Buckets:   []float64{0.25, 0.5, 0.75, 1, 2, 4},
 		}, []string{"host", "code"}),
 		Up: prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Namespace: namespace,
@@ -38,7 +39,7 @@ func NewHTTPMetrics(namespace, subsystem string) *HTTPMetrics {
 }
 
 func (m HTTPMetrics) Observe(measurement HTTPMeasurement) {
-	m.Latency.WithLabelValues(measurement.Host, measurement.Code).Set(measurement.Latency.Seconds())
+	m.Latency.WithLabelValues(measurement.Host, measurement.Code).Observe(measurement.Latency.Seconds())
 	var v float64
 	if measurement.Up {
 		v = 1

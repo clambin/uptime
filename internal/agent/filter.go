@@ -2,17 +2,17 @@ package agent
 
 import "context"
 
-type Filter struct {
-	EventsIn  <-chan Event
-	EventsOut chan<- Event
+type filter struct {
+	in  <-chan Event
+	out chan<- Event
 }
 
-func (f *Filter) Run(ctx context.Context) {
+func (f *filter) Run(ctx context.Context) {
 	for {
 		select {
-		case ev := <-f.EventsIn:
+		case ev := <-f.in:
 			if f.shouldForward(ev) {
-				f.EventsOut <- ev
+				f.out <- ev
 			}
 		case <-ctx.Done():
 			return
@@ -25,7 +25,7 @@ const (
 	traefikExternalEndpoint   = "websecure"
 )
 
-func (f *Filter) shouldForward(ev Event) bool {
+func (f *filter) shouldForward(ev Event) bool {
 	// TODO: make this configurable (how?)
 	value, ok := ev.Annotations[traefikEndpointAnnotation]
 	return ok && value == traefikExternalEndpoint

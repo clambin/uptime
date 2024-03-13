@@ -65,7 +65,7 @@ func (h *HostChecker) ping() HTTPMeasurement {
 	resp, err := h.httpClient.Do(req)
 
 	if err != nil {
-		h.logger.Debug("measurement made", "result", m, "err", err)
+		h.logger.Debug("measurement failed", "result", m, "err", err)
 		return m
 	}
 

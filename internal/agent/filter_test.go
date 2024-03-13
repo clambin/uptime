@@ -9,9 +9,9 @@ import (
 func TestFilter_Run(t *testing.T) {
 	in := make(chan Event)
 	out := make(chan Event, 1)
-	f := Filter{
-		EventsIn:  in,
-		EventsOut: out,
+	f := filter{
+		in:  in,
+		out: out,
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())

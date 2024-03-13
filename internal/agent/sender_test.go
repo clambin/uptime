@@ -17,8 +17,8 @@ func TestSender_Run(t *testing.T) {
 	s := httptest.NewServer(&h)
 
 	ch := make(chan Event)
-	sender := Sender{
-		Process:    ch,
+	sender := sender{
+		in:         ch,
 		monitor:    s.URL,
 		httpClient: http.DefaultClient,
 		logger:     slog.Default(),

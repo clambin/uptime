@@ -4,24 +4,25 @@ import (
 	"context"
 	"fmt"
 	"github.com/clambin/uptime/internal/monitor"
+	"github.com/clambin/uptime/pkg/retry"
 	"io"
 	"log/slog"
 	"net/http"
 	"time"
 )
 
-type Sender struct {
-	Process    <-chan Event
+type sender struct {
+	in         <-chan Event
 	monitor    string
 	token      string
 	httpClient *http.Client
 	logger     *slog.Logger
 }
 
-func (s Sender) Run(ctx context.Context) {
+func (s sender) Run(ctx context.Context) {
 	for {
 		select {
-		case ev := <-s.Process:
+		case ev := <-s.in:
 			s.process(ctx, ev)
 		case <-ctx.Done():
 			return
@@ -29,22 +30,23 @@ func (s Sender) Run(ctx context.Context) {
 	}
 }
 
-func (s Sender) process(ctx context.Context, ev Event) {
-	waitTime := time.Second
+func (s sender) process(ctx context.Context, ev Event) {
 	l := s.logger.With("target", ev.Host, "eventType", ev.Type)
 	l.Debug("sending request")
+	waiter := retry.MultiplyingWaiter{InitialWait: time.Second, MaxWait: time.Millisecond, Factor: 2}
 	for {
 		err := s.send(ctx, ev)
 		if err == nil {
 			return
 		}
-		l.Warn("request failed. waiting to retry", "err", err, "wait", waitTime)
-		time.Sleep(waitTime)
-		waitTime = min(waitTime*2, time.Minute)
+		l.Warn("request failed. waiting to retry", "err", err)
+		if waiter.Wait(ctx) != nil {
+			return
+		}
 	}
 }
 
-func (s Sender) makeRequest(ev Event) monitor.Request {
+func (s sender) makeRequest(ev Event) monitor.Request {
 	// TODO: make this configurable
 	return monitor.Request{
 		Target:    ev.Host,
@@ -54,7 +56,7 @@ func (s Sender) makeRequest(ev Event) monitor.Request {
 	}
 }
 
-func (s Sender) send(ctx context.Context, ev Event) error {
+func (s sender) send(ctx context.Context, ev Event) error {
 	r, _ := http.NewRequestWithContext(ctx, getMethod(ev.Type), s.monitor+"/target?"+s.makeRequest(ev).Encode(), nil)
 	r.Header.Set("Authorization", "Bearer "+s.token)
 	resp, err := s.httpClient.Do(r)
