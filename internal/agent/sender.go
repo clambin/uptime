@@ -12,11 +12,10 @@ import (
 )
 
 type sender struct {
-	in         <-chan Event
-	monitor    string
-	token      string
-	httpClient *http.Client
-	logger     *slog.Logger
+	in            <-chan Event
+	configuration Configuration
+	httpClient    *http.Client
+	logger        *slog.Logger
 }
 
 func (s sender) Run(ctx context.Context) {
@@ -47,18 +46,23 @@ func (s sender) process(ctx context.Context, ev Event) {
 }
 
 func (s sender) makeRequest(ev Event) monitor.Request {
-	// TODO: make this configurable
+	ep, ok := s.configuration.Hosts[ev.Host]
+	if !ok {
+		ep = s.configuration.Global
+	}
 	return monitor.Request{
 		Target:    ev.Host,
-		Method:    http.MethodGet,
-		ValidCode: []int{http.StatusOK, http.StatusUnauthorized},
-		Interval:  5 * time.Minute,
+		Method:    ep.Method,
+		ValidCode: ep.ValidStatusCodes,
+		Interval:  ep.Interval,
 	}
 }
 
 func (s sender) send(ctx context.Context, ev Event) error {
-	r, _ := http.NewRequestWithContext(ctx, getMethod(ev.Type), s.monitor+"/target?"+s.makeRequest(ev).Encode(), nil)
-	r.Header.Set("Authorization", "Bearer "+s.token)
+	r, _ := http.NewRequestWithContext(ctx, getMethod(ev.Type), s.configuration.Monitor+"/target?"+s.makeRequest(ev).Encode(), nil)
+	if s.configuration.Token != "" {
+		r.Header.Set("Authorization", "Bearer "+s.configuration.Token)
+	}
 	resp, err := s.httpClient.Do(r)
 	if err != nil {
 		return err

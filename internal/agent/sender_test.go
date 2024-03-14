@@ -17,16 +17,17 @@ func TestSender_Run(t *testing.T) {
 	s := httptest.NewServer(&h)
 
 	ch := make(chan Event)
-	sender := sender{
-		in:         ch,
-		monitor:    s.URL,
-		httpClient: http.DefaultClient,
-		logger:     slog.Default(),
+	c := sender{
+		in:            ch,
+		configuration: DefaultConfiguration,
+		httpClient:    http.DefaultClient,
+		logger:        slog.Default(),
 	}
+	c.configuration.Monitor = s.URL
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	go sender.Run(ctx)
+	go c.Run(ctx)
 
 	_, ok := h.getHost("foo")
 	assert.False(t, ok)

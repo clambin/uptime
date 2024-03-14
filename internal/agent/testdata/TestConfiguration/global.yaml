@@ -1,0 +1,8 @@
+monitor: http://localhost:8080
+token: "1234"
+global:
+    interval: 1m0s
+    method: HEAD
+    valid-status-codes:
+        - 200
+        - 401

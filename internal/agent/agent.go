@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/clambin/uptime/internal/agent/informer"
 	v1 "k8s.io/api/core/v1"
@@ -31,7 +32,10 @@ type Agent struct {
 	sender          sender
 }
 
-func New(c *kubernetes.Clientset, monitor string, token string, logger *slog.Logger) (*Agent, error) {
+func New(c *kubernetes.Clientset, cfg Configuration, logger *slog.Logger) (*Agent, error) {
+	if cfg.Monitor == "" {
+		return nil, errors.New("missing monitor URL")
+	}
 	filterIn := make(chan Event)
 	reSenderIn := make(chan Event)
 	senderIn := make(chan Event)
@@ -54,11 +58,10 @@ func New(c *kubernetes.Clientset, monitor string, token string, logger *slog.Log
 			events: make(map[string]Event),
 		},
 		sender: sender{
-			in:         senderIn,
-			monitor:    monitor,
-			token:      token,
-			httpClient: http.DefaultClient,
-			logger:     logger.With("component", "sender"),
+			in:            senderIn,
+			configuration: cfg,
+			httpClient:    http.DefaultClient,
+			logger:        logger.With("component", "sender"),
 		},
 	}, nil
 }
