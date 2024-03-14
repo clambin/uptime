@@ -16,8 +16,7 @@ func TestWithLogger(t *testing.T) {
 	l := logtester.New(&output, slog.LevelInfo)
 
 	h := logger.WithLogger(l)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		l := r.Context().Value(logger.LoggerCtxValue).(*slog.Logger)
-		l.Info("hello", "method", r.Method)
+		logger.Logger(r).Info("hello", "method", r.Method)
 	}))
 
 	r, _ := http.NewRequest(http.MethodPost, "/", nil)
