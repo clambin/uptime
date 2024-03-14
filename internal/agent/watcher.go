@@ -7,36 +7,34 @@ import (
 	"strings"
 )
 
-type IngressWatcher struct {
-	WatcherOut chan<- Event
-	logger     *slog.Logger
-	hostnames  map[string]string
+type ingressWatcher struct {
+	out       chan<- Event
+	logger    *slog.Logger
+	hostnames map[string]string
 }
 
-func (w IngressWatcher) OnAdd(ingress any, _ bool) {
+func (w ingressWatcher) OnAdd(ingress any, _ bool) {
 	w.send(AddEvent, ingress.(*netv1.Ingress))
 }
 
-func (w IngressWatcher) OnUpdate(oldIngress, newIngress any) {
+func (w ingressWatcher) OnUpdate(oldIngress, newIngress any) {
 	oldHostnames := set.New(getHostnames(oldIngress.(*netv1.Ingress))...)
 	newHostnames := set.New(getHostnames(newIngress.(*netv1.Ingress))...)
 
-	if strings.Join(oldHostnames.ListOrdered(), ",") == strings.Join(newHostnames.ListOrdered(), ",") {
-		return
+	if strings.Join(oldHostnames.ListOrdered(), ",") != strings.Join(newHostnames.ListOrdered(), ",") {
+		w.send(DeleteEvent, oldIngress.(*netv1.Ingress))
+		w.send(AddEvent, newIngress.(*netv1.Ingress))
 	}
-
-	w.send(DeleteEvent, oldIngress.(*netv1.Ingress))
-	w.send(AddEvent, newIngress.(*netv1.Ingress))
 }
 
-func (w IngressWatcher) OnDelete(ingress any) {
+func (w ingressWatcher) OnDelete(ingress any) {
 	w.send(DeleteEvent, ingress.(*netv1.Ingress))
 }
 
-func (w IngressWatcher) send(eventType EventType, ingress *netv1.Ingress) {
+func (w ingressWatcher) send(eventType EventType, ingress *netv1.Ingress) {
 	for _, hostname := range getHostnames(ingress) {
 		w.logger.Debug("ingress detected", "name", ingress.Name, "namespace", ingress.Namespace, "host", hostname, "event", eventType)
-		w.WatcherOut <- Event{
+		w.out <- Event{
 			Type:        eventType,
 			Host:        hostname,
 			Annotations: ingress.ObjectMeta.Annotations,
@@ -48,7 +46,9 @@ func getHostnames(ingress *netv1.Ingress) []string {
 	hostnames := make([]string, len(ingress.Spec.Rules))
 	for i := range ingress.Spec.Rules {
 		hostname := ingress.Spec.Rules[i].Host
+		// TODO: prefix could be http
 		if !strings.HasPrefix("https://", hostname) {
+			// TODO: support http?
 			hostname = "https://" + hostname
 		}
 		hostnames[i] = hostname

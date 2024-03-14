@@ -3,11 +3,47 @@ package monitor
 import (
 	"bytes"
 	"github.com/clambin/uptime/pkg/logtester"
+	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/assert"
 	"log/slog"
+	"net/http"
 	"testing"
 	"time"
 )
+
+func TestHTTPMetrics_Observe(t *testing.T) {
+	metrics := NewHTTPMetrics("uptime", "monitor")
+	assert.NoError(t, testutil.CollectAndCompare(metrics, bytes.NewBufferString(``)))
+
+	metrics.Observe(HTTPMeasurement{
+		Host:      "http://localhost",
+		Up:        true,
+		Code:      http.MethodGet,
+		Latency:   time.Second,
+		IsTLS:     true,
+		TLSExpiry: time.Hour,
+	})
+
+	assert.NoError(t, testutil.CollectAndCompare(metrics, bytes.NewBufferString(`
+# HELP uptime_monitor_certificate_expiry_days number of days before the certificate expires
+# TYPE uptime_monitor_certificate_expiry_days gauge
+uptime_monitor_certificate_expiry_days{host="http://localhost"} 0.041666666666666664
+# HELP uptime_monitor_latency site latency
+# TYPE uptime_monitor_latency histogram
+uptime_monitor_latency_bucket{code="GET",host="http://localhost",le="0.25"} 0
+uptime_monitor_latency_bucket{code="GET",host="http://localhost",le="0.5"} 0
+uptime_monitor_latency_bucket{code="GET",host="http://localhost",le="0.75"} 0
+uptime_monitor_latency_bucket{code="GET",host="http://localhost",le="1"} 1
+uptime_monitor_latency_bucket{code="GET",host="http://localhost",le="2"} 1
+uptime_monitor_latency_bucket{code="GET",host="http://localhost",le="4"} 1
+uptime_monitor_latency_bucket{code="GET",host="http://localhost",le="+Inf"} 1
+uptime_monitor_latency_sum{code="GET",host="http://localhost"} 1
+uptime_monitor_latency_count{code="GET",host="http://localhost"} 1
+# HELP uptime_monitor_up site is up/down
+# TYPE uptime_monitor_up gauge
+uptime_monitor_up{host="http://localhost"} 1
+`)))
+}
 
 func TestHTTPMeasurement_LogValue(t *testing.T) {
 	tests := []struct {

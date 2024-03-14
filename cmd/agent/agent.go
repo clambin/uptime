@@ -13,14 +13,29 @@ import (
 )
 
 var (
-	version = "change-me"
-	debug   = flag.Bool("debug", false, "log debug messages")
-	monitor = flag.String("monitor", "", "host monitor URL (required)")
-	token   = flag.String("token", "", "host monitor token (required)")
+	version       = "change-me"
+	debug         = flag.Bool("debug", false, "log debug messages")
+	monitor       = flag.String("monitor", "", "host monitor URL (required)")
+	token         = flag.String("token", "", "host monitor token (required)")
+	configuration = flag.String("configuration", "", "configuration file")
 )
 
 func main() {
 	flag.Parse()
+
+	var cfg agent.Configuration
+	if *configuration != "" {
+		var err error
+		if cfg, err = agent.LoadFromFile(*configuration); err != nil {
+			panic(err)
+		}
+	}
+	if *monitor != "" {
+		cfg.Monitor = *monitor
+	}
+	if *token != "" {
+		cfg.Token = *token
+	}
 
 	var opts slog.HandlerOptions
 	if *debug {
@@ -28,23 +43,13 @@ func main() {
 	}
 	l := slog.New(slog.NewJSONHandler(os.Stderr, &opts))
 
-	if *monitor == "" {
-		l.Error("missing monitor URL argument")
-		return
-	}
-
-	if *token == "" {
-		l.Error("missing monitor token")
-		return
-	}
-
 	c, err := kubernetes.NewForConfig(config.GetConfigOrDie())
 	if err != nil {
 		l.Error("failed to connect to cluster", "err", err)
 		return
 	}
 
-	a, err := agent.New(c, *monitor, *token, l)
+	a, err := agent.New(c, cfg, l)
 	if err != nil {
 		l.Error("failed to start agent", "err", err)
 		return

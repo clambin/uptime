@@ -12,21 +12,99 @@ import (
 	"time"
 )
 
+func TestSender_makeRequest(t *testing.T) {
+	tests := []struct {
+		name   string
+		config Configuration
+		event  Event
+		want   monitor.Request
+	}{
+		{
+			name:   "global",
+			config: DefaultConfiguration,
+			event:  Event{Type: AddEvent, Host: "foo"},
+			want: monitor.Request{
+				Target:    "foo",
+				Method:    DefaultGlobalConfiguration.Method,
+				ValidCode: DefaultGlobalConfiguration.ValidStatusCodes,
+				Interval:  DefaultGlobalConfiguration.Interval,
+			},
+		},
+		{
+			name: "method",
+			config: Configuration{
+				Global: DefaultGlobalConfiguration,
+				Hosts: map[string]EndpointConfiguration{
+					"foo": {Method: http.MethodHead},
+				},
+			},
+			event: Event{Type: AddEvent, Host: "foo"},
+			want: monitor.Request{
+				Target:    "foo",
+				Method:    http.MethodHead,
+				ValidCode: DefaultGlobalConfiguration.ValidStatusCodes,
+				Interval:  DefaultGlobalConfiguration.Interval,
+			},
+		},
+		{
+			name: "interval",
+			config: Configuration{
+				Global: DefaultGlobalConfiguration,
+				Hosts: map[string]EndpointConfiguration{
+					"foo": {Interval: time.Minute},
+				},
+			},
+			event: Event{Type: AddEvent, Host: "foo"},
+			want: monitor.Request{
+				Target:    "foo",
+				Method:    DefaultGlobalConfiguration.Method,
+				ValidCode: DefaultGlobalConfiguration.ValidStatusCodes,
+				Interval:  time.Minute,
+			},
+		},
+		{
+			name: "status codes",
+			config: Configuration{
+				Global: DefaultGlobalConfiguration,
+				Hosts: map[string]EndpointConfiguration{
+					"foo": {ValidStatusCodes: []int{http.StatusUnauthorized}},
+				},
+			},
+			event: Event{Type: AddEvent, Host: "foo"},
+			want: monitor.Request{
+				Target:    "foo",
+				Method:    DefaultGlobalConfiguration.Method,
+				ValidCode: []int{http.StatusUnauthorized},
+				Interval:  DefaultGlobalConfiguration.Interval,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			s := sender{configuration: tt.config}
+			assert.Equal(t, tt.want, s.makeRequest(tt.event))
+		})
+	}
+}
+
 func TestSender_Run(t *testing.T) {
 	h := server{hosts: make(map[string]bool)}
 	s := httptest.NewServer(&h)
 
 	ch := make(chan Event)
-	sender := Sender{
-		Process:    ch,
-		monitor:    s.URL,
-		httpClient: http.DefaultClient,
-		logger:     slog.Default(),
+	c := sender{
+		in:            ch,
+		configuration: DefaultConfiguration,
+		httpClient:    http.DefaultClient,
+		logger:        slog.Default(),
 	}
+	c.configuration.Monitor = s.URL
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	go sender.Run(ctx)
+	go c.Run(ctx)
 
 	_, ok := h.getHost("foo")
 	assert.False(t, ok)

@@ -1,0 +1,15 @@
+monitor: http://localhost:8080
+token: "1234"
+global:
+    interval: 5m0s
+    method: GET
+    valid-status-codes:
+        - 200
+hosts:
+    http://localhost:8080:
+        interval: 5m0s
+        method: GET
+        valid-status-codes:
+            - 200
+    http://localhost:9090:
+        skip: true

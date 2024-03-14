@@ -10,6 +10,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	fcache "k8s.io/client-go/tools/cache/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -50,7 +51,7 @@ func TestInformer(t *testing.T) {
 		return i.ResourceEventHandlerRegistration.HasSynced()
 	}, time.Second, time.Millisecond)
 
-	assert.Equal(t, len(ingresses), w.added)
+	assert.Equal(t, len(ingresses), int(w.added.Load()))
 
 }
 
@@ -70,7 +71,7 @@ func TestIngressInformer(t *testing.T) {
 		return i.ResourceEventHandlerRegistration.HasSynced()
 	}, time.Second, time.Millisecond)
 
-	assert.NotZero(t, w.added)
+	assert.NotZero(t, w.added.Load())
 }
 
 /*
@@ -99,19 +100,20 @@ var _ cache.ResourceEventHandler = &watcher{}
 
 type watcher struct {
 	t     *testing.T
-	added int
+	added atomic.Int32
 }
 
 func (w *watcher) OnAdd(obj any, _ bool) {
 	w.t.Helper()
 	_, ok := obj.(*netv1.Ingress)
 	assert.True(w.t, ok)
-	w.added++
+	w.added.Add(1)
 }
 
-func (w *watcher) OnUpdate(_, _ any) {
-	//TODO implement me
-	panic("implement me")
+func (w *watcher) OnUpdate(oldObj, newObj any) {
+	w.t.Helper()
+	w.OnDelete(oldObj)
+	w.OnAdd(newObj, false)
 }
 
 func (w *watcher) OnDelete(obj any) {

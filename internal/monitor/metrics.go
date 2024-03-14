@@ -9,18 +9,19 @@ import (
 var _ prometheus.Collector = HTTPMetrics{}
 
 type HTTPMetrics struct {
-	Latency    *prometheus.GaugeVec
+	Latency    *prometheus.HistogramVec
 	Up         *prometheus.GaugeVec
 	CertExpiry *prometheus.GaugeVec
 }
 
 func NewHTTPMetrics(namespace, subsystem string) *HTTPMetrics {
 	return &HTTPMetrics{
-		Latency: prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Latency: prometheus.NewHistogramVec(prometheus.HistogramOpts{
 			Namespace: namespace,
 			Subsystem: subsystem,
-			Name:      "latency_seconds",
-			Help:      "site latency in seconds",
+			Name:      "latency",
+			Help:      "site latency",
+			Buckets:   []float64{0.25, 0.5, 0.75, 1, 2, 4},
 		}, []string{"host", "code"}),
 		Up: prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Namespace: namespace,
@@ -31,23 +32,27 @@ func NewHTTPMetrics(namespace, subsystem string) *HTTPMetrics {
 		CertExpiry: prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Namespace: namespace,
 			Subsystem: subsystem,
-			Name:      "_certificate_expiry_days",
+			Name:      "certificate_expiry_days",
 			Help:      "number of days before the certificate expires",
 		}, []string{"host"}),
 	}
 }
 
+var bool2int = map[bool]int{
+	true:  1,
+	false: 0,
+}
+
 func (m HTTPMetrics) Observe(measurement HTTPMeasurement) {
-	m.Latency.WithLabelValues(measurement.Host, measurement.Code).Set(measurement.Latency.Seconds())
-	var v float64
-	if measurement.Up {
-		v = 1
+	m.Up.WithLabelValues(measurement.Host).Set(float64(bool2int[measurement.Up]))
+	if measurement.Code != "" {
+		m.Latency.WithLabelValues(measurement.Host, measurement.Code).Observe(measurement.Latency.Seconds())
 	}
-	m.Up.WithLabelValues(measurement.Host).Set(v)
 	if measurement.IsTLS {
 		m.CertExpiry.WithLabelValues(measurement.Host).Set(measurement.TLSExpiry.Hours() / 24)
 	}
 }
+
 func (m HTTPMetrics) Describe(ch chan<- *prometheus.Desc) {
 	m.Up.Describe(ch)
 	m.Latency.Describe(ch)
