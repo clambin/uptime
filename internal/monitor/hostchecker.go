@@ -1,10 +1,13 @@
 package monitor
 
 import (
+	"cmp"
+	"crypto/x509"
 	"fmt"
 	"github.com/clambin/go-common/set"
 	"log/slog"
 	"net/http"
+	"slices"
 	"time"
 )
 
@@ -49,7 +52,6 @@ func (h *HostChecker) Run(interval time.Duration) {
 	defer h.logger.Debug("hostchecker stopped", "target", h.target)
 	for {
 		h.metrics.Observe(h.ping())
-
 		select {
 		case <-h.shutdown:
 			return
@@ -67,20 +69,26 @@ func (h *HostChecker) ping() HTTPMeasurement {
 	resp, err := h.httpClient.Do(req)
 
 	if err != nil {
-		h.logger.Debug("measurement failed", "result", m, "err", err)
+		h.logger.Debug("measurement failed", "err", err)
 		return m
 	}
 
 	_ = resp.Body.Close()
 	m.Code = fmt.Sprintf("%03d", resp.StatusCode)
-	if m.Up = h.validCodes.Contains(resp.StatusCode); m.Up {
-		m.Latency = time.Since(start)
-	}
+	m.Up = h.validCodes.Contains(resp.StatusCode)
+	m.Latency = time.Since(start)
 	if resp.TLS != nil && len(resp.TLS.PeerCertificates) > 0 {
 		m.IsTLS = true
-		m.TLSExpiry = time.Until(resp.TLS.PeerCertificates[0].NotAfter)
+		m.TLSExpiry = time.Until(getLastExpiry(resp.TLS.PeerCertificates))
 	}
 
-	h.logger.Debug("measurement made", "result", m)
+	h.logger.Debug("measurement made", "up", m.Up, "latency", m.Latency, "code", m.Code)
 	return m
+}
+
+func getLastExpiry(certificates []*x509.Certificate) time.Time {
+	slices.SortFunc(certificates, func(a, b *x509.Certificate) int {
+		return -cmp.Compare(a.NotAfter.UnixNano(), b.NotAfter.UnixNano())
+	})
+	return certificates[0].NotAfter
 }

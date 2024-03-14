@@ -1,7 +1,7 @@
-package monitor_test
+package monitor
 
 import (
-	"github.com/clambin/uptime/internal/monitor"
+	"crypto/x509"
 	"github.com/stretchr/testify/assert"
 	"log/slog"
 	"net/http"
@@ -47,10 +47,10 @@ func TestHostChecker_Up(t *testing.T) {
 			defer s.Close()
 
 			o := observer{}
-			h := monitor.NewHostChecker(s.URL, http.MethodGet, &o, s.Client(), slog.Default(), tt.valid...)
+			h := NewHostChecker(s.URL, http.MethodGet, &o, s.Client(), slog.Default(), tt.valid...)
 			go h.Run(10 * time.Millisecond)
 
-			var m monitor.HTTPMeasurement
+			var m HTTPMeasurement
 			var ok bool
 			assert.Eventually(t, func() bool {
 				m, ok = o.result()
@@ -66,22 +66,32 @@ func TestHostChecker_Up(t *testing.T) {
 	}
 }
 
-var _ monitor.HTTPObserver = &observer{}
+func Test_getLastExpiry(t *testing.T) {
+	certificates := []*x509.Certificate{
+		{NotAfter: time.Date(2024, time.January, 1, 0, 0, 0, 0, time.UTC)},
+		{NotAfter: time.Date(2024, time.February, 1, 0, 0, 0, 0, time.UTC)},
+		{NotAfter: time.Date(2024, time.March, 1, 0, 0, 0, 0, time.UTC)},
+	}
+	last := getLastExpiry(certificates)
+	assert.Equal(t, time.Date(2024, time.March, 1, 0, 0, 0, 0, time.UTC), last)
+}
+
+var _ HTTPObserver = &observer{}
 
 type observer struct {
-	observation monitor.HTTPMeasurement
+	observation HTTPMeasurement
 	received    bool
 	lock        sync.Mutex
 }
 
-func (o *observer) Observe(httpMetrics monitor.HTTPMeasurement) {
+func (o *observer) Observe(httpMetrics HTTPMeasurement) {
 	o.lock.Lock()
 	defer o.lock.Unlock()
 	o.observation = httpMetrics
 	o.received = true
 }
 
-func (o *observer) result() (monitor.HTTPMeasurement, bool) {
+func (o *observer) result() (HTTPMeasurement, bool) {
 	o.lock.Lock()
 	defer o.lock.Unlock()
 	return o.observation, o.received

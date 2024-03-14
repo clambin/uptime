@@ -47,14 +47,13 @@ func (m *Monitor) addTarget(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	l.Debug("adding target", "req", req)
-
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
 	h := NewHostChecker(req.Target, req.Method, m.metrics, m.httpClient, l.With("target", req.Target), req.ValidCode...)
 	m.hostCheckers.Add(req.Target, h, req.Interval)
-	//w.WriteHeader(http.StatusOK)
+
+	l.Info("target added", "req", req)
 }
 
 func (m *Monitor) removeTarget(w http.ResponseWriter, r *http.Request) {
@@ -71,8 +70,6 @@ func (m *Monitor) removeTarget(w http.ResponseWriter, r *http.Request) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	l.Debug("removing target", "target", req.Target)
-
 	m.hostCheckers.Remove(req.Target)
-	w.WriteHeader(http.StatusOK)
+	l.Debug("target removed", "target", req.Target)
 }
