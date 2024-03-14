@@ -32,11 +32,11 @@ const (
 
 func (f *filter) shouldForward(ev Event) bool {
 	if !f.hasAnnotations(ev) {
-		f.logger.Debug("host skipped: missing annotations", "event", ev)
+		f.logger.Debug("host skipped: missing annotations", "host", ev.Host)
 		return false
 	}
 	if !f.noSkip(ev) {
-		f.logger.Debug("host skipped: on skip list", "event", ev)
+		f.logger.Debug("host skipped: on skip list", "host", ev.Host)
 		return false
 	}
 	return true
