@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"github.com/stretchr/testify/assert"
+	"log/slog"
 	"testing"
 )
 
@@ -63,7 +64,7 @@ func TestFilter_shouldForward(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			f := filter{configuration: tt.config}
+			f := filter{configuration: tt.config, logger: slog.Default()}
 			tt.want(t, f.shouldForward(tt.event))
 		})
 	}

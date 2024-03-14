@@ -52,6 +52,7 @@ func New(c *kubernetes.Clientset, cfg Configuration, logger *slog.Logger) (*Agen
 			in:            filterIn,
 			out:           reSenderIn,
 			configuration: cfg,
+			logger:        logger.With("component", "filter"),
 		},
 		resender: reSender{
 			in:     reSenderIn,

@@ -110,9 +110,10 @@ func (w *watcher) OnAdd(obj any, _ bool) {
 	w.added.Add(1)
 }
 
-func (w *watcher) OnUpdate(_, _ any) {
-	//TODO implement me
-	panic("implement me")
+func (w *watcher) OnUpdate(oldObj, newObj any) {
+	w.t.Helper()
+	w.OnDelete(oldObj)
+	w.OnAdd(newObj, false)
 }
 
 func (w *watcher) OnDelete(obj any) {

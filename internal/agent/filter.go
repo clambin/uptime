@@ -1,11 +1,15 @@
 package agent
 
-import "context"
+import (
+	"context"
+	"log/slog"
+)
 
 type filter struct {
 	in            <-chan Event
 	out           chan<- Event
 	configuration Configuration
+	logger        *slog.Logger
 }
 
 func (f *filter) Run(ctx context.Context) {
@@ -27,16 +31,24 @@ const (
 )
 
 func (f *filter) shouldForward(ev Event) bool {
-	return f.verifyHost(ev) && f.verifyAnnotations(ev)
+	if !f.hasAnnotations(ev) {
+		f.logger.Debug("host skipped: missing annotations", "event", ev)
+		return false
+	}
+	if !f.noSkip(ev) {
+		f.logger.Debug("host skipped: on skip list", "event", ev)
+		return false
+	}
+	return true
 }
 
-func (f *filter) verifyHost(ev Event) bool {
-	cfg, ok := f.configuration.Hosts[ev.Host]
-	return !ok || !cfg.Skip
-}
-
-func (f *filter) verifyAnnotations(ev Event) bool {
+func (f *filter) hasAnnotations(ev Event) bool {
 	// TODO: make this configurable (how?)
 	value, ok := ev.Annotations[traefikEndpointAnnotation]
 	return ok && value == traefikExternalEndpoint
+}
+
+func (f *filter) noSkip(ev Event) bool {
+	cfg, ok := f.configuration.Hosts[ev.Host]
+	return !ok || !cfg.Skip
 }
