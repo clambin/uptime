@@ -32,9 +32,9 @@ func NewHostChecker(target string, method string, m HTTPObserver, c *http.Client
 	return &HostChecker{
 		target:     target,
 		method:     method,
+		validCodes: set.New(validCodes...),
 		httpClient: c,
 		metrics:    m,
-		validCodes: set.New(validCodes...),
 		shutdown:   make(chan struct{}),
 		logger:     l,
 	}
@@ -45,6 +45,8 @@ func (h *HostChecker) Cancel() {
 }
 
 func (h *HostChecker) Run(interval time.Duration) {
+	h.logger.Debug("hostchecker started", "target", h.target, "method", h.method, "codes", h.validCodes)
+	defer h.logger.Debug("hostchecker stopped", "target", h.target)
 	for {
 		h.metrics.Observe(h.ping())
 
@@ -79,6 +81,6 @@ func (h *HostChecker) ping() HTTPMeasurement {
 		m.TLSExpiry = time.Until(resp.TLS.PeerCertificates[0].NotAfter)
 	}
 
-	h.logger.Debug("measurement made", "result", m, "code", resp.StatusCode)
+	h.logger.Debug("measurement made", "result", m)
 	return m
 }
