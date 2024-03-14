@@ -32,7 +32,7 @@ func NewHTTPMetrics(namespace, subsystem string) *HTTPMetrics {
 		CertExpiry: prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Namespace: namespace,
 			Subsystem: subsystem,
-			Name:      "_certificate_expiry_days",
+			Name:      "certificate_expiry_days",
 			Help:      "number of days before the certificate expires",
 		}, []string{"host"}),
 	}

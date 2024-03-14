@@ -13,7 +13,7 @@ import (
 )
 
 func TestMonitor(t *testing.T) {
-	metrics := monitor.NewHTTPMetrics("uptime", "")
+	metrics := monitor.NewHTTPMetrics("uptime", "monitor")
 	assert.NoError(t, testutil.CollectAndCompare(metrics, bytes.NewBufferString(``)))
 
 	m := monitor.New(metrics, nil)
@@ -30,8 +30,8 @@ func TestMonitor(t *testing.T) {
 	}, time.Second, 20*time.Millisecond)
 
 	assert.NoError(t, testutil.CollectAndCompare(metrics, bytes.NewBufferString(`
-# HELP uptime_up site is up/down
-# TYPE uptime_up gauge
-uptime_up{host="http://localhost"} 0
-`), "uptime_up"))
+# HELP uptime_monitor_up site is up/down
+# TYPE uptime_monitor_up gauge
+uptime_monitor_up{host="http://localhost"} 0
+`), "uptime_monitor_up"))
 }
