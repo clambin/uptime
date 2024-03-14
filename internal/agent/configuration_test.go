@@ -21,22 +21,11 @@ func TestConfiguration(t *testing.T) {
 		input Configuration
 	}{
 		{
-			name: "simple",
-			input: Configuration{
-				Monitor: "http://localhost:8080",
-				Token:   "1234",
-			},
-		},
-		{
 			name: "global",
 			input: Configuration{
 				Monitor: "http://localhost:8080",
 				Token:   "1234",
-				Global: EndpointConfiguration{
-					Interval:         time.Minute,
-					Method:           http.MethodHead,
-					ValidStatusCodes: []int{http.StatusOK, http.StatusUnauthorized},
-				},
+				Global:  DefaultGlobalConfiguration,
 			},
 		},
 		{
@@ -44,28 +33,7 @@ func TestConfiguration(t *testing.T) {
 			input: Configuration{
 				Monitor: "http://localhost:8080",
 				Token:   "1234",
-				Hosts: map[string]EndpointConfiguration{
-					"http://localhost:8080": {
-						Interval:         5 * time.Minute,
-						Method:           http.MethodGet,
-						ValidStatusCodes: []int{http.StatusOK},
-					},
-					"http://localhost:9090": {
-						Skip: true,
-					},
-				},
-			},
-		},
-		{
-			name: "full",
-			input: Configuration{
-				Monitor: "http://localhost:8080",
-				Token:   "1234",
-				Global: EndpointConfiguration{
-					Interval:         time.Minute,
-					Method:           http.MethodHead,
-					ValidStatusCodes: []int{http.StatusOK, http.StatusUnauthorized},
-				},
+				Global:  DefaultGlobalConfiguration,
 				Hosts: map[string]EndpointConfiguration{
 					"http://localhost:8080": {
 						Interval:         5 * time.Minute,
@@ -82,6 +50,7 @@ func TestConfiguration(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
+
 			output, err := yaml.Marshal(tt.input)
 			fp := filepath.Join("testdata", t.Name()+".yaml")
 			if *update {
@@ -91,8 +60,7 @@ func TestConfiguration(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, string(golden), string(output))
 
-			var read Configuration
-			err = yaml.NewDecoder(bytes.NewReader(output)).Decode(&read)
+			read, err := LoadFromFile(fp)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.input, read)
 		})

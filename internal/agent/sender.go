@@ -46,9 +46,17 @@ func (s sender) process(ctx context.Context, ev Event) {
 }
 
 func (s sender) makeRequest(ev Event) monitor.Request {
-	ep, ok := s.configuration.Hosts[ev.Host]
-	if !ok {
-		ep = s.configuration.Global
+	ep := s.configuration.Global
+	if custom, ok := s.configuration.Hosts[ev.Host]; ok {
+		if custom.Method != "" {
+			ep.Method = custom.Method
+		}
+		if custom.Interval != 0 {
+			ep.Interval = custom.Interval
+		}
+		if custom.ValidStatusCodes != nil {
+			ep.ValidStatusCodes = custom.ValidStatusCodes
+		}
 	}
 	return monitor.Request{
 		Target:    ev.Host,
