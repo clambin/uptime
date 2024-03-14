@@ -38,17 +38,21 @@ func NewHTTPMetrics(namespace, subsystem string) *HTTPMetrics {
 	}
 }
 
+var bool2int = map[bool]int{
+	true:  1,
+	false: 0,
+}
+
 func (m HTTPMetrics) Observe(measurement HTTPMeasurement) {
-	m.Latency.WithLabelValues(measurement.Host, measurement.Code).Observe(measurement.Latency.Seconds())
-	var v float64
-	if measurement.Up {
-		v = 1
+	m.Up.WithLabelValues(measurement.Host).Set(float64(bool2int[measurement.Up]))
+	if measurement.Code != "" {
+		m.Latency.WithLabelValues(measurement.Host, measurement.Code).Observe(measurement.Latency.Seconds())
 	}
-	m.Up.WithLabelValues(measurement.Host).Set(v)
 	if measurement.IsTLS {
 		m.CertExpiry.WithLabelValues(measurement.Host).Set(measurement.TLSExpiry.Hours() / 24)
 	}
 }
+
 func (m HTTPMetrics) Describe(ch chan<- *prometheus.Desc) {
 	m.Up.Describe(ch)
 	m.Latency.Describe(ch)
