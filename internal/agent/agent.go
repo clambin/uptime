@@ -49,8 +49,9 @@ func New(c *kubernetes.Clientset, cfg Configuration, logger *slog.Logger) (*Agen
 	return &Agent{
 		ingressInformer: i,
 		filter: filter{
-			in:  filterIn,
-			out: reSenderIn,
+			in:            filterIn,
+			out:           reSenderIn,
+			configuration: cfg,
 		},
 		resender: reSender{
 			in:     reSenderIn,

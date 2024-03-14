@@ -3,8 +3,9 @@ package agent
 import "context"
 
 type filter struct {
-	in  <-chan Event
-	out chan<- Event
+	in            <-chan Event
+	out           chan<- Event
+	configuration Configuration
 }
 
 func (f *filter) Run(ctx context.Context) {
@@ -26,6 +27,15 @@ const (
 )
 
 func (f *filter) shouldForward(ev Event) bool {
+	return f.verifyHost(ev) && f.verifyAnnotations(ev)
+}
+
+func (f *filter) verifyHost(ev Event) bool {
+	cfg, ok := f.configuration.Hosts[ev.Host]
+	return !ok || !cfg.Skip
+}
+
+func (f *filter) verifyAnnotations(ev Event) bool {
 	// TODO: make this configurable (how?)
 	value, ok := ev.Annotations[traefikEndpointAnnotation]
 	return ok && value == traefikExternalEndpoint

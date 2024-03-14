@@ -26,3 +26,45 @@ func TestFilter_Run(t *testing.T) {
 	ev := <-out
 	assert.Equal(t, "foo", ev.Host)
 }
+
+func TestFilter_shouldForward(t *testing.T) {
+	tests := []struct {
+		name   string
+		config Configuration
+		event  Event
+		want   assert.BoolAssertionFunc
+	}{
+		{
+			name:   "pass",
+			config: DefaultConfiguration,
+			event:  Event{Type: AddEvent, Host: "foo", Annotations: map[string]string{traefikEndpointAnnotation: traefikExternalEndpoint}},
+			want:   assert.True,
+		},
+		{
+			name:   "no annotations",
+			config: DefaultConfiguration,
+			event:  Event{Type: AddEvent, Host: "foo"},
+			want:   assert.False,
+		},
+		{
+			name:   "no skip",
+			config: Configuration{Hosts: map[string]EndpointConfiguration{"foo": DefaultGlobalConfiguration}},
+			event:  Event{Type: AddEvent, Host: "foo", Annotations: map[string]string{traefikEndpointAnnotation: traefikExternalEndpoint}},
+			want:   assert.True,
+		},
+		{
+			name:   "skip",
+			config: Configuration{Hosts: map[string]EndpointConfiguration{"foo": {Skip: true}}},
+			event:  Event{Type: AddEvent, Host: "foo", Annotations: map[string]string{traefikEndpointAnnotation: traefikExternalEndpoint}},
+			want:   assert.False,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			f := filter{configuration: tt.config}
+			tt.want(t, f.shouldForward(tt.event))
+		})
+	}
+}
