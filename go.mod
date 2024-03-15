@@ -1,6 +1,6 @@
 module github.com/clambin/uptime
 
-go 1.22
+go 1.22.1
 
 require (
 	github.com/clambin/go-common/set v0.4.3
