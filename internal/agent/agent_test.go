@@ -6,23 +6,15 @@ import (
 	"github.com/stretchr/testify/require"
 	netv1 "k8s.io/api/networking/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
+	fcache "k8s.io/client-go/tools/cache/testing"
 	"log/slog"
 	"net/http/httptest"
 	"os"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"testing"
 	"time"
 )
 
 func TestAgent_Run(t *testing.T) {
-	t.Skip()
-
-	c, err := kubernetes.NewForConfig(config.GetConfigOrDie())
-	if err != nil {
-		t.Skip("not connected to cluster")
-	}
-
 	h := server{hosts: make(map[string]bool)}
 	s := httptest.NewServer(&h)
 	defer s.Close()
@@ -32,7 +24,9 @@ func TestAgent_Run(t *testing.T) {
 	cfg := DefaultConfiguration
 	cfg.Monitor = s.URL
 
-	a, err := New(c, cfg, l)
+	f := fcache.NewFakeControllerSource()
+
+	a, err := NewWithListWatcher(f, cfg, l)
 	require.NoError(t, err)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -40,8 +34,19 @@ func TestAgent_Run(t *testing.T) {
 
 	go a.Run(ctx)
 
+	f.Add(&netv1.Ingress{
+		TypeMeta: v1.TypeMeta{},
+		ObjectMeta: v1.ObjectMeta{Name: "foo", Namespace: "default", Annotations: map[string]string{
+			traefikEndpointAnnotation: traefikExternalEndpoint,
+		}},
+		Spec: netv1.IngressSpec{Rules: []netv1.IngressRule{
+			{Host: "https://foo.example.com"},
+		}},
+		Status: netv1.IngressStatus{},
+	})
+
 	assert.Eventually(t, func() bool {
-		up, ok := h.getHost("plex.agrajag.duckdns.org")
+		up, ok := h.getHost("https://foo.example.com")
 		return ok && up
 	}, 5*time.Second, time.Second)
 }

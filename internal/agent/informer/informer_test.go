@@ -6,10 +6,8 @@ import (
 	"github.com/stretchr/testify/require"
 	netv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	fcache "k8s.io/client-go/tools/cache/testing"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -49,25 +47,6 @@ func TestInformer(t *testing.T) {
 	for _, ingress := range ingresses {
 		watchlist.Delete(ingress)
 	}
-}
-
-func TestIngressInformer(t *testing.T) {
-	t.Skip()
-	c, err := kubernetes.NewForConfig(config.GetConfigOrDie())
-	require.NoError(t, err)
-
-	w := watcher{t: t}
-	i, err := informer.NewIngressInformer(c, v1.NamespaceAll, &w)
-	require.NoError(t, err)
-
-	go i.Run()
-	defer i.Cancel()
-
-	assert.Eventually(t, func() bool {
-		return i.ResourceEventHandlerRegistration.HasSynced()
-	}, time.Second, time.Millisecond)
-
-	assert.NotZero(t, w.added.Load())
 }
 
 var _ cache.ResourceEventHandler = &watcher{}

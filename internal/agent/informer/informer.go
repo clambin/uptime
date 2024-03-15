@@ -1,10 +1,7 @@
 package informer
 
 import (
-	netv1 "k8s.io/api/networking/v1"
-	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"time"
 )
@@ -33,11 +30,4 @@ func (i *Informer) Run() {
 func (i *Informer) Cancel() {
 	i.ch <- struct{}{}
 	_ = i.SharedInformer.RemoveEventHandler(i.ResourceEventHandlerRegistration)
-}
-
-const resyncPeriod = 5 * time.Minute
-
-func NewIngressInformer(c kubernetes.Interface, namespace string, handler cache.ResourceEventHandler) (*Informer, error) {
-	g := cache.NewListWatchFromClient(c.NetworkingV1().RESTClient(), "ingresses", namespace, fields.Everything())
-	return New(g, resyncPeriod, new(netv1.Ingress), handler)
 }

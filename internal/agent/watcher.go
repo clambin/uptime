@@ -47,7 +47,7 @@ func getHostnames(ingress *netv1.Ingress) []string {
 	for i := range ingress.Spec.Rules {
 		hostname := ingress.Spec.Rules[i].Host
 		// TODO: prefix could be http
-		if !strings.HasPrefix("https://", hostname) {
+		if !strings.HasPrefix(hostname, "https://") {
 			// TODO: support http?
 			hostname = "https://" + hostname
 		}
