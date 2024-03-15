@@ -1,13 +1,10 @@
 package monitor
 
 import (
-	"cmp"
-	"crypto/x509"
 	"fmt"
 	"github.com/clambin/go-common/set"
 	"log/slog"
 	"net/http"
-	"slices"
 	"time"
 )
 
@@ -79,16 +76,10 @@ func (h *HostChecker) ping() HTTPMeasurement {
 	m.Latency = time.Since(start)
 	if resp.TLS != nil && len(resp.TLS.PeerCertificates) > 0 {
 		m.IsTLS = true
-		m.TLSExpiry = time.Until(getLastExpiry(resp.TLS.PeerCertificates))
+		// PeerCertificates: the first one in the list is the leaf certificate
+		m.TLSExpiry = time.Until(resp.TLS.PeerCertificates[0].NotAfter)
 	}
 
 	h.logger.Debug("measurement made", "up", m.Up, "latency", m.Latency, "code", m.Code)
 	return m
-}
-
-func getLastExpiry(certificates []*x509.Certificate) time.Time {
-	slices.SortFunc(certificates, func(a, b *x509.Certificate) int {
-		return -cmp.Compare(a.NotAfter.UnixNano(), b.NotAfter.UnixNano())
-	})
-	return certificates[0].NotAfter
 }

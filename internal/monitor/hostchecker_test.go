@@ -1,7 +1,6 @@
 package monitor
 
 import (
-	"crypto/x509"
 	"github.com/stretchr/testify/assert"
 	"log/slog"
 	"net/http"
@@ -64,16 +63,6 @@ func TestHostChecker_Up(t *testing.T) {
 			assert.NotZero(t, m.TLSExpiry)
 		})
 	}
-}
-
-func Test_getLastExpiry(t *testing.T) {
-	certificates := []*x509.Certificate{
-		{NotAfter: time.Date(2024, time.January, 1, 0, 0, 0, 0, time.UTC)},
-		{NotAfter: time.Date(2024, time.February, 1, 0, 0, 0, 0, time.UTC)},
-		{NotAfter: time.Date(2024, time.March, 1, 0, 0, 0, 0, time.UTC)},
-	}
-	last := getLastExpiry(certificates)
-	assert.Equal(t, time.Date(2024, time.March, 1, 0, 0, 0, 0, time.UTC), last)
 }
 
 var _ HTTPObserver = &observer{}
