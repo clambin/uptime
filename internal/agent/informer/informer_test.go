@@ -41,18 +41,14 @@ func TestInformer(t *testing.T) {
 		watchlist.Add(ingress)
 	}
 
-	time.Sleep(time.Millisecond)
+	assert.Eventually(t, func() bool {
+		return i.ResourceEventHandlerRegistration.HasSynced()
+	}, time.Second, time.Millisecond)
+	assert.Equal(t, len(ingresses), int(w.added.Load()))
 
 	for _, ingress := range ingresses {
 		watchlist.Delete(ingress)
 	}
-
-	assert.Eventually(t, func() bool {
-		return i.ResourceEventHandlerRegistration.HasSynced()
-	}, time.Second, time.Millisecond)
-
-	assert.Equal(t, len(ingresses), int(w.added.Load()))
-
 }
 
 func TestIngressInformer(t *testing.T) {
@@ -73,28 +69,6 @@ func TestIngressInformer(t *testing.T) {
 
 	assert.NotZero(t, w.added.Load())
 }
-
-/*
-func TestIngressRouteInformer(t *testing.T) {
-	c, err := kubernetes.NewForConfig(config.GetConfigOrDie())
-	if err != nil {
-		t.Skip("not connected to cluster")
-	}
-	g := cache.NewListWatchFromClient(c.NetworkingV1().RESTClient(), "ingressroutes", v1.NamespaceAll, fields.Everything())
-	w := watcher{t: t}
-	i, err := informer.New(g, 5*time.Minute, new(netv1.Ingress), &w)
-	require.NoError(t, err)
-
-	go i.Run()
-	defer i.Cancel()
-
-	assert.Eventually(t, func() bool {
-		return i.ResourceEventHandlerRegistration.HasSynced()
-	}, time.Second, time.Millisecond)
-
-	assert.NotZero(t, w.added)
-}
-*/
 
 var _ cache.ResourceEventHandler = &watcher{}
 
