@@ -20,14 +20,14 @@ func NewMetrics(namespace, subsystem string) *Metrics {
 		IngressEvents: prometheus.NewCounterVec(prometheus.CounterOpts{
 			Namespace:   namespace,
 			Subsystem:   subsystem,
-			Name:        "ingress_events",
+			Name:        "ingress_events_count",
 			Help:        "number of ingress events received from kubernetes",
 			ConstLabels: nil,
 		}, []string{"host", "type"}),
 		Requests: prometheus.NewCounterVec(prometheus.CounterOpts{
 			Namespace:   namespace,
 			Subsystem:   subsystem,
-			Name:        "requests",
+			Name:        "requests_count",
 			Help:        "number of requests sent to the monitor",
 			ConstLabels: nil,
 		}, []string{"code"}),
@@ -35,8 +35,8 @@ func NewMetrics(namespace, subsystem string) *Metrics {
 			Namespace: namespace,
 			Subsystem: subsystem,
 			Name:      "request_latency",
-			Help:      "request latency latency",
-			Buckets:   []float64{0.1, 0.2, 0.5, 1, 2, 5},
+			Help:      "latency of requests sent to the monitor",
+			Buckets:   []float64{0.01, 0.1, 0.2, 0.5, 1, 2},
 		}, []string{"code"}),
 	}
 }

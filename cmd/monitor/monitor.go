@@ -14,6 +14,7 @@ import (
 )
 
 var (
+	version  = "change-me"
 	debug    = flag.Bool("debug", false, "Log debugging information")
 	token    = flag.String("token", "", "Authorization token")
 	addr     = flag.String("addr", ":8080", "Listener port")
@@ -52,8 +53,9 @@ func main() {
 			),
 		),
 	}
-
+	l.Info("starting uptime monitor", "version", version)
 	if err := s.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
 		panic(err)
 	}
+	l.Info("uptime monitor stopped")
 }

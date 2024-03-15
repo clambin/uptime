@@ -55,6 +55,7 @@ func NewWithListWatcher(lw cache.ListerWatcher, cfg Configuration, metrics *Metr
 
 	i, err := informer.New(lw, resyncPeriod, new(netv1.Ingress), &ingressWatcher{
 		out:       filterIn,
+		metrics:   metrics,
 		logger:    logger.With("component", "informer"),
 		hostnames: make(map[string]string),
 	})

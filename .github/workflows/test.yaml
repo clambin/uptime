@@ -4,7 +4,7 @@ on:
   push:
     branches-ignore:
       - main
-      - resend
+      - metrics
   pull_request_target:
 
 jobs:
