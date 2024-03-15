@@ -26,7 +26,7 @@ func TestAgent_Run(t *testing.T) {
 
 	f := fcache.NewFakeControllerSource()
 
-	a, err := NewWithListWatcher(f, cfg, l)
+	a, err := NewWithListWatcher(f, cfg, NewMetrics("uptime", "agent"), l)
 	require.NoError(t, err)
 
 	ctx, cancel := context.WithCancel(context.Background())

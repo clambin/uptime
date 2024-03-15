@@ -35,16 +35,16 @@ type Agent struct {
 	sender          sender
 }
 
-func New(c *kubernetes.Clientset, cfg Configuration, logger *slog.Logger) (*Agent, error) {
+func New(c *kubernetes.Clientset, cfg Configuration, metrics *Metrics, logger *slog.Logger) (*Agent, error) {
 	g := cache.NewListWatchFromClient(c.NetworkingV1().RESTClient(), "ingresses", v1.NamespaceAll, fields.Everything())
-	return NewWithListWatcher(g, cfg, logger)
+	return NewWithListWatcher(g, cfg, metrics, logger)
 }
 
 const (
 	resyncPeriod = 5 * time.Minute
 )
 
-func NewWithListWatcher(lw cache.ListerWatcher, cfg Configuration, logger *slog.Logger) (*Agent, error) {
+func NewWithListWatcher(lw cache.ListerWatcher, cfg Configuration, metrics *Metrics, logger *slog.Logger) (*Agent, error) {
 	if cfg.Monitor == "" {
 		return nil, errors.New("missing monitor URL")
 	}
@@ -78,6 +78,7 @@ func NewWithListWatcher(lw cache.ListerWatcher, cfg Configuration, logger *slog.
 		sender: sender{
 			in:            senderIn,
 			configuration: cfg,
+			metrics:       metrics,
 			httpClient:    http.DefaultClient,
 			logger:        logger.With("component", "sender"),
 		},

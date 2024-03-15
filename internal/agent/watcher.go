@@ -9,6 +9,7 @@ import (
 
 type ingressWatcher struct {
 	out       chan<- Event
+	metrics   *Metrics
 	logger    *slog.Logger
 	hostnames map[string]string
 }
@@ -34,10 +35,14 @@ func (w ingressWatcher) OnDelete(ingress any) {
 func (w ingressWatcher) send(eventType EventType, ingress *netv1.Ingress) {
 	for _, hostname := range getHostnames(ingress) {
 		w.logger.Debug("ingress detected", "name", ingress.Name, "namespace", ingress.Namespace, "host", hostname, "event", eventType)
-		w.out <- Event{
+		ev := Event{
 			Type:        eventType,
 			Host:        hostname,
 			Annotations: ingress.ObjectMeta.Annotations,
+		}
+		w.out <- ev
+		if w.metrics != nil {
+			w.metrics.ObserveEvent(ev)
 		}
 	}
 }

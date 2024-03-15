@@ -14,6 +14,7 @@ import (
 type sender struct {
 	in            <-chan Event
 	configuration Configuration
+	metrics       *Metrics
 	httpClient    *http.Client
 	logger        *slog.Logger
 }
@@ -67,6 +68,7 @@ func (s sender) makeRequest(ev Event) monitor.Request {
 }
 
 func (s sender) send(ctx context.Context, ev Event) error {
+	start := time.Now()
 	r, _ := http.NewRequestWithContext(ctx, getMethod(ev.Type), s.configuration.Monitor+"/target?"+s.makeRequest(ev).Encode(), nil)
 	if s.configuration.Token != "" {
 		r.Header.Set("Authorization", "Bearer "+s.configuration.Token)
@@ -76,6 +78,10 @@ func (s sender) send(ctx context.Context, ev Event) error {
 		return err
 	}
 	defer func(Body io.ReadCloser) { _ = Body.Close() }(resp.Body)
+
+	if s.metrics != nil {
+		s.metrics.ObserveRequest(resp.StatusCode, time.Since(start))
+	}
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("unexpected http status: %s", resp.Status)
