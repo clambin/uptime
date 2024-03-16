@@ -1,19 +1,16 @@
 package monitor
 
 import (
-	"fmt"
-	"github.com/clambin/go-common/set"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 )
 
 type HostChecker struct {
-	target     string
-	method     string
+	req        Request
 	httpClient *http.Client
 	metrics    HTTPObserver
-	validCodes set.Set[int]
 	shutdown   chan struct{}
 	logger     *slog.Logger
 }
@@ -22,17 +19,12 @@ type HTTPObserver interface {
 	Observe(httpMetrics HTTPMeasurement)
 }
 
-func NewHostChecker(target string, method string, m HTTPObserver, c *http.Client, l *slog.Logger, validCodes ...int) *HostChecker {
+func NewHostChecker(req Request, m HTTPObserver, c *http.Client, l *slog.Logger) *HostChecker {
 	if c == nil {
 		c = http.DefaultClient
 	}
-	if len(validCodes) == 0 {
-		validCodes = []int{http.StatusOK}
-	}
 	return &HostChecker{
-		target:     target,
-		method:     method,
-		validCodes: set.New(validCodes...),
+		req:        req,
 		httpClient: c,
 		metrics:    m,
 		shutdown:   make(chan struct{}),
@@ -45,8 +37,8 @@ func (h *HostChecker) Cancel() {
 }
 
 func (h *HostChecker) Run(interval time.Duration) {
-	h.logger.Debug("hostchecker started", "target", h.target, "method", h.method, "codes", h.validCodes)
-	defer h.logger.Debug("hostchecker stopped", "target", h.target)
+	h.logger.Debug("hostchecker started", "request", h.req)
+	defer h.logger.Debug("hostchecker stopped", "target", h.req.Target)
 	for {
 		h.metrics.Observe(h.ping())
 		select {
@@ -58,9 +50,14 @@ func (h *HostChecker) Run(interval time.Duration) {
 }
 
 func (h *HostChecker) ping() HTTPMeasurement {
-	m := HTTPMeasurement{Host: h.target}
+	m := HTTPMeasurement{Host: h.req.Target}
 
-	req, _ := http.NewRequest(h.method, h.target, nil)
+	target := h.req.Target
+	if !strings.HasPrefix(target, "https://") && !strings.HasPrefix(target, "http://") {
+		target = "https://" + target
+	}
+
+	req, _ := http.NewRequest(h.req.Method, target, nil)
 
 	start := time.Now()
 	resp, err := h.httpClient.Do(req)
@@ -71,8 +68,8 @@ func (h *HostChecker) ping() HTTPMeasurement {
 	}
 
 	_ = resp.Body.Close()
-	m.Code = fmt.Sprintf("%03d", resp.StatusCode)
-	m.Up = h.validCodes.Contains(resp.StatusCode)
+	m.Up = h.req.ValidCodes.Contains(resp.StatusCode)
+	m.Code = resp.StatusCode
 	m.Latency = time.Since(start)
 	if resp.TLS != nil && len(resp.TLS.PeerCertificates) > 0 {
 		m.IsTLS = true

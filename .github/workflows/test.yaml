@@ -4,7 +4,7 @@ on:
   push:
     branches-ignore:
       - main
-      - metrics
+      - refactor
   pull_request_target:
 
 jobs:

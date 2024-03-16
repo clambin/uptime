@@ -1,6 +1,7 @@
 package monitor
 
 import (
+	"github.com/clambin/go-common/set"
 	"github.com/stretchr/testify/assert"
 	"log/slog"
 	"net/http"
@@ -29,11 +30,6 @@ func TestHostChecker_Up(t *testing.T) {
 			valid:    []int{http.StatusOK},
 			wantUp:   assert.False,
 		},
-		{
-			name:     "default is 200",
-			response: http.StatusOK,
-			wantUp:   assert.True,
-		},
 	}
 
 	for _, tt := range tests {
@@ -46,7 +42,12 @@ func TestHostChecker_Up(t *testing.T) {
 			defer s.Close()
 
 			o := observer{}
-			h := NewHostChecker(s.URL, http.MethodGet, &o, s.Client(), slog.Default(), tt.valid...)
+			r := Request{
+				Target:     s.URL,
+				Method:     http.MethodGet,
+				ValidCodes: set.New(tt.valid...),
+			}
+			h := NewHostChecker(r, &o, s.Client(), slog.Default())
 			go h.Run(10 * time.Millisecond)
 
 			var m HTTPMeasurement

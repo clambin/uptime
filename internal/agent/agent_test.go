@@ -62,7 +62,7 @@ func TestAgent_Run(t *testing.T) {
 	f.Add(&validIngress)
 
 	assert.Eventually(t, func() bool {
-		up, ok := h.getHost("https://example.com")
+		up, ok := h.getHost("example.com")
 		return ok && up
 	}, 5*time.Second, time.Second)
 }

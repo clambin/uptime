@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"fmt"
+	"github.com/clambin/go-common/set"
 	"github.com/clambin/uptime/internal/monitor"
 	"github.com/clambin/uptime/pkg/retry"
 	"io"
@@ -84,11 +85,10 @@ func (s sender) makeRequest(host string) monitor.Request {
 		}
 	}
 	return monitor.Request{
-		// TODO: best place to manage adding https:// ???
-		Target:    "https://" + host,
-		Method:    ep.Method,
-		ValidCode: ep.ValidStatusCodes,
-		Interval:  ep.Interval,
+		Target:     host,
+		Method:     ep.Method,
+		ValidCodes: set.New(ep.ValidStatusCodes...),
+		Interval:   ep.Interval,
 	}
 }
 

@@ -2,6 +2,7 @@ package monitor
 
 import (
 	"bytes"
+	"github.com/clambin/go-common/set"
 	"github.com/clambin/uptime/pkg/logtester"
 	"github.com/stretchr/testify/assert"
 	"log/slog"
@@ -32,10 +33,10 @@ func Test_parseRequest(t *testing.T) {
 			rawQuery: `target=http://localhost:8080/metrics&method=HEAD&codes=200,403&interval=1m`,
 			wantErr:  assert.NoError,
 			wantReq: Request{
-				Target:    "http://localhost:8080/metrics",
-				Method:    http.MethodHead,
-				ValidCode: []int{http.StatusOK, http.StatusForbidden},
-				Interval:  1 * time.Minute,
+				Target:     "http://localhost:8080/metrics",
+				Method:     http.MethodHead,
+				ValidCodes: set.New(http.StatusOK, http.StatusForbidden),
+				Interval:   1 * time.Minute,
 			},
 		},
 		{
@@ -48,10 +49,10 @@ func Test_parseRequest(t *testing.T) {
 			rawQuery: `target=http://localhost:8080/metrics`,
 			wantErr:  assert.NoError,
 			wantReq: Request{
-				Target:    "http://localhost:8080/metrics",
-				Method:    http.MethodGet,
-				ValidCode: []int{http.StatusOK},
-				Interval:  5 * time.Minute,
+				Target:     "http://localhost:8080/metrics",
+				Method:     http.MethodGet,
+				ValidCodes: set.New(http.StatusOK),
+				Interval:   5 * time.Minute,
 			},
 		},
 		{
@@ -98,28 +99,28 @@ func TestRequest_Encode(t *testing.T) {
 		{
 			name: "full",
 			fields: fields{
-				Target:    "http://localhost:8080",
+				Target:    "localhost:8080",
 				Method:    http.MethodGet,
 				ValidCode: []int{http.StatusOK, http.StatusForbidden},
 				Interval:  time.Minute,
 			},
-			want: `codes=200%2C403&interval=1m0s&method=GET&target=http%3A%2F%2Flocalhost%3A8080`,
+			want: `codes=200%2C403&interval=1m0s&method=GET&target=localhost%3A8080`,
 		},
 		{
 			name: "target only",
 			fields: fields{
-				Target: "http://localhost:8080",
+				Target: "localhost:8080",
 			},
-			want: `target=http%3A%2F%2Flocalhost%3A8080`,
+			want: `target=localhost%3A8080`,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := Request{
-				Target:    tt.fields.Target,
-				Method:    tt.fields.Method,
-				ValidCode: tt.fields.ValidCode,
-				Interval:  tt.fields.Interval,
+				Target:     tt.fields.Target,
+				Method:     tt.fields.Method,
+				ValidCodes: set.New(tt.fields.ValidCode...),
+				Interval:   tt.fields.Interval,
 			}
 			assert.Equal(t, tt.want, r.Encode())
 		})
@@ -131,10 +132,10 @@ func TestRequest_LogValue(t *testing.T) {
 	l := logtester.New(&output, slog.LevelInfo)
 
 	req := Request{
-		Target:    "http://localhost",
-		Method:    http.MethodHead,
-		ValidCode: []int{http.StatusOK},
-		Interval:  time.Minute,
+		Target:     "http://localhost",
+		Method:     http.MethodHead,
+		ValidCodes: set.New(http.StatusOK),
+		Interval:   time.Minute,
 	}
 	l.Info("request", "req", req)
 

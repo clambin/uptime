@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"github.com/clambin/go-common/set"
 	"github.com/clambin/uptime/internal/monitor"
 	"github.com/stretchr/testify/assert"
 	"log/slog"
@@ -23,10 +24,10 @@ func TestSender_makeRequests(t *testing.T) {
 			config: DefaultConfiguration,
 			event:  event{eventType: addEvent, ingress: &validIngress},
 			want: []monitor.Request{{
-				Target:    "https://example.com",
-				Method:    DefaultGlobalConfiguration.Method,
-				ValidCode: DefaultGlobalConfiguration.ValidStatusCodes,
-				Interval:  DefaultGlobalConfiguration.Interval,
+				Target:     "example.com",
+				Method:     DefaultGlobalConfiguration.Method,
+				ValidCodes: set.New(DefaultGlobalConfiguration.ValidStatusCodes...),
+				Interval:   DefaultGlobalConfiguration.Interval,
 			}},
 		},
 		{
@@ -39,10 +40,10 @@ func TestSender_makeRequests(t *testing.T) {
 			},
 			event: event{eventType: addEvent, ingress: &validIngress},
 			want: []monitor.Request{{
-				Target:    "https://example.com",
-				Method:    http.MethodHead,
-				ValidCode: DefaultGlobalConfiguration.ValidStatusCodes,
-				Interval:  DefaultGlobalConfiguration.Interval,
+				Target:     "example.com",
+				Method:     http.MethodHead,
+				ValidCodes: set.New(DefaultGlobalConfiguration.ValidStatusCodes...),
+				Interval:   DefaultGlobalConfiguration.Interval,
 			}},
 		},
 		{
@@ -55,10 +56,10 @@ func TestSender_makeRequests(t *testing.T) {
 			},
 			event: event{eventType: addEvent, ingress: &validIngress},
 			want: []monitor.Request{{
-				Target:    "https://example.com",
-				Method:    DefaultGlobalConfiguration.Method,
-				ValidCode: DefaultGlobalConfiguration.ValidStatusCodes,
-				Interval:  time.Minute,
+				Target:     "example.com",
+				Method:     DefaultGlobalConfiguration.Method,
+				ValidCodes: set.New(DefaultGlobalConfiguration.ValidStatusCodes...),
+				Interval:   time.Minute,
 			}},
 		},
 		{
@@ -71,10 +72,10 @@ func TestSender_makeRequests(t *testing.T) {
 			},
 			event: event{eventType: addEvent, ingress: &validIngress},
 			want: []monitor.Request{{
-				Target:    "https://example.com",
-				Method:    DefaultGlobalConfiguration.Method,
-				ValidCode: []int{http.StatusUnauthorized},
-				Interval:  DefaultGlobalConfiguration.Interval,
+				Target:     "example.com",
+				Method:     DefaultGlobalConfiguration.Method,
+				ValidCodes: set.New(http.StatusUnauthorized),
+				Interval:   DefaultGlobalConfiguration.Interval,
 			}},
 		},
 	}
@@ -110,13 +111,13 @@ func TestSender_Run(t *testing.T) {
 
 	ch <- event{eventType: addEvent, ingress: &validIngress}
 	assert.Eventually(t, func() bool {
-		up, ok := h.getHost("https://example.com")
+		up, ok := h.getHost("example.com")
 		return up && ok
 	}, time.Second, time.Millisecond)
 
 	ch <- event{eventType: deleteEvent, ingress: &validIngress}
 	assert.Eventually(t, func() bool {
-		up, ok := h.getHost("https://example.com")
+		up, ok := h.getHost("example.com")
 		return !up && ok
 	}, time.Second, time.Millisecond)
 

@@ -3,6 +3,7 @@ package monitor
 import (
 	"github.com/prometheus/client_golang/prometheus"
 	"log/slog"
+	"strconv"
 	"time"
 )
 
@@ -45,8 +46,8 @@ var bool2int = map[bool]int{
 
 func (m HTTPMetrics) Observe(measurement HTTPMeasurement) {
 	m.Up.WithLabelValues(measurement.Host).Set(float64(bool2int[measurement.Up]))
-	if measurement.Code != "" {
-		m.Latency.WithLabelValues(measurement.Host, measurement.Code).Observe(measurement.Latency.Seconds())
+	if measurement.Code > 0 {
+		m.Latency.WithLabelValues(measurement.Host, strconv.Itoa(measurement.Code)).Observe(measurement.Latency.Seconds())
 	}
 	if measurement.IsTLS {
 		m.CertExpiry.WithLabelValues(measurement.Host).Set(measurement.TLSExpiry.Hours() / 24)
@@ -70,7 +71,7 @@ var _ slog.LogValuer = HTTPMeasurement{}
 type HTTPMeasurement struct {
 	Host      string
 	Up        bool
-	Code      string
+	Code      int
 	Latency   time.Duration
 	IsTLS     bool
 	TLSExpiry time.Duration
@@ -80,8 +81,8 @@ func (m HTTPMeasurement) LogValue() slog.Value {
 	attrs := make([]slog.Attr, 2, 5)
 	attrs[0] = slog.String("target", m.Host)
 	attrs[1] = slog.Bool("up", m.Up)
-	if m.Code != "" {
-		attrs = append(attrs, slog.String("code", m.Code))
+	if m.Code > 0 {
+		attrs = append(attrs, slog.String("code", strconv.Itoa(m.Code)))
 		attrs = append(attrs, slog.Duration("latency", m.Latency))
 	}
 	if m.IsTLS {
