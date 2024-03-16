@@ -14,24 +14,24 @@ type HTTPMetrics struct {
 	CertExpiry *prometheus.GaugeVec
 }
 
-func NewHTTPMetrics(namespace, subsystem string) *HTTPMetrics {
+func NewHTTPMetrics() *HTTPMetrics {
 	return &HTTPMetrics{
 		Latency: prometheus.NewHistogramVec(prometheus.HistogramOpts{
-			Namespace: namespace,
-			Subsystem: subsystem,
+			Namespace: "uptime",
+			Subsystem: "monitor",
 			Name:      "latency",
 			Help:      "site latency",
 			Buckets:   []float64{0.25, 0.5, 0.75, 1, 2, 4},
 		}, []string{"host", "code"}),
 		Up: prometheus.NewGaugeVec(prometheus.GaugeOpts{
-			Namespace: namespace,
-			Subsystem: subsystem,
+			Namespace: "uptime",
+			Subsystem: "monitor",
 			Name:      "up",
 			Help:      "site is up/down",
 		}, []string{"host"}),
 		CertExpiry: prometheus.NewGaugeVec(prometheus.GaugeOpts{
-			Namespace: namespace,
-			Subsystem: subsystem,
+			Namespace: "uptime",
+			Subsystem: "monitor",
 			Name:      "certificate_expiry_days",
 			Help:      "number of days before the certificate expires",
 		}, []string{"host"}),

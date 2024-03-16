@@ -54,7 +54,7 @@ func main() {
 		return
 	}
 
-	metrics := agent.NewMetrics("uptime", "agent")
+	metrics := agent.NewMetrics()
 	prometheus.MustRegister(metrics)
 
 	http.Handle("/metrics", promhttp.Handler())

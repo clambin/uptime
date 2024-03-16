@@ -17,7 +17,7 @@ func TestMonitor(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	metrics := monitor.NewHTTPMetrics("uptime", "monitor")
+	metrics := monitor.NewHTTPMetrics()
 	assert.NoError(t, testutil.CollectAndCompare(metrics, bytes.NewBufferString(``)))
 
 	m := monitor.New(metrics, nil)

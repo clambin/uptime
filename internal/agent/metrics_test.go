@@ -10,7 +10,7 @@ import (
 )
 
 func TestMetrics(t *testing.T) {
-	m := NewMetrics("uptime", "agent")
+	m := NewMetrics()
 
 	ev := event{eventType: addEvent, ingress: &validIngress}
 	m.ObserveEvent(ev)

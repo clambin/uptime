@@ -35,7 +35,7 @@ func main() {
 		return
 	}
 
-	metrics := monitor.NewHTTPMetrics("uptime", "monitor")
+	metrics := monitor.NewHTTPMetrics()
 	prometheus.MustRegister(metrics)
 
 	http.Handle("/metrics", promhttp.Handler())
