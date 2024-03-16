@@ -23,7 +23,7 @@ func NewMetrics(namespace, subsystem string) *Metrics {
 			Name:        "ingress_events_count",
 			Help:        "number of ingress events received from kubernetes",
 			ConstLabels: nil,
-		}, []string{"host", "type"}),
+		}, []string{"name", "namespace", "type"}),
 		Requests: prometheus.NewCounterVec(prometheus.CounterOpts{
 			Namespace:   namespace,
 			Subsystem:   subsystem,
@@ -41,8 +41,8 @@ func NewMetrics(namespace, subsystem string) *Metrics {
 	}
 }
 
-func (m Metrics) ObserveEvent(ev Event) {
-	m.IngressEvents.WithLabelValues(ev.Host, strings.ToLower(string(ev.Type))).Add(1)
+func (m Metrics) ObserveEvent(ev event) {
+	m.IngressEvents.WithLabelValues(ev.name(), ev.namespace(), strings.ToLower(string(ev.eventType))).Add(1)
 }
 
 func (m Metrics) ObserveRequest(code int, latency time.Duration) {

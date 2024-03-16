@@ -8,55 +8,36 @@ import (
 )
 
 type ingressWatcher struct {
-	out       chan<- Event
-	metrics   *Metrics
-	logger    *slog.Logger
-	hostnames map[string]string
+	out     chan<- event
+	metrics *Metrics
+	logger  *slog.Logger
 }
 
 func (w ingressWatcher) OnAdd(ingress any, _ bool) {
-	w.send(AddEvent, ingress.(*netv1.Ingress))
+	w.send(event{eventType: addEvent, ingress: ingress.(*netv1.Ingress)})
 }
 
 func (w ingressWatcher) OnUpdate(oldIngress, newIngress any) {
-	oldHostnames := set.New(getHostnames(oldIngress.(*netv1.Ingress))...)
-	newHostnames := set.New(getHostnames(newIngress.(*netv1.Ingress))...)
+	oldEv := event{eventType: deleteEvent, ingress: oldIngress.(*netv1.Ingress)}
+	newEv := event{eventType: addEvent, ingress: newIngress.(*netv1.Ingress)}
+
+	oldHostnames := set.New(oldEv.targetHosts()...)
+	newHostnames := set.New(newEv.targetHosts()...)
 
 	if strings.Join(oldHostnames.ListOrdered(), ",") != strings.Join(newHostnames.ListOrdered(), ",") {
-		w.send(DeleteEvent, oldIngress.(*netv1.Ingress))
-		w.send(AddEvent, newIngress.(*netv1.Ingress))
+		w.send(oldEv)
+		w.send(newEv)
 	}
 }
 
 func (w ingressWatcher) OnDelete(ingress any) {
-	w.send(DeleteEvent, ingress.(*netv1.Ingress))
+	w.send(event{eventType: deleteEvent, ingress: ingress.(*netv1.Ingress)})
 }
 
-func (w ingressWatcher) send(eventType EventType, ingress *netv1.Ingress) {
-	for _, hostname := range getHostnames(ingress) {
-		w.logger.Debug("ingress detected", "name", ingress.Name, "namespace", ingress.Namespace, "host", hostname, "event", eventType)
-		ev := Event{
-			Type:        eventType,
-			Host:        hostname,
-			Annotations: ingress.ObjectMeta.Annotations,
-		}
-		w.out <- ev
-		if w.metrics != nil {
-			w.metrics.ObserveEvent(ev)
-		}
+func (w ingressWatcher) send(ev event) {
+	w.logger.Debug("ingress change detected", "event", ev)
+	w.out <- ev
+	if w.metrics != nil {
+		w.metrics.ObserveEvent(ev)
 	}
-}
-
-func getHostnames(ingress *netv1.Ingress) []string {
-	hostnames := make([]string, len(ingress.Spec.Rules))
-	for i := range ingress.Spec.Rules {
-		hostname := ingress.Spec.Rules[i].Host
-		// TODO: prefix could be http
-		if !strings.HasPrefix(hostname, "https://") {
-			// TODO: support http?
-			hostname = "https://" + hostname
-		}
-		hostnames[i] = hostname
-	}
-	return hostnames
 }

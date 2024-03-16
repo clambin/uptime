@@ -8,27 +8,28 @@ import (
 )
 
 func TestReSender_Run(t *testing.T) {
-	in := make(chan Event)
-	out := make(chan Event)
+	in := make(chan event)
+	out := make(chan event)
 	r := reSender{
 		in:     in,
 		out:    out,
-		events: make(map[string]Event),
+		events: make(map[string]event),
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go r.Run(ctx, 500*time.Millisecond)
 
-	in <- Event{Type: AddEvent, Host: "foo"}
-	assert.Equal(t, Event{Type: AddEvent, Host: "foo"}, <-out)
-	assert.Equal(t, Event{Type: AddEvent, Host: "foo"}, <-out)
+	evIn := event{eventType: addEvent, ingress: &validIngress}
+	in <- evIn
+	assert.Equal(t, evIn, <-out)
+	assert.Equal(t, evIn, <-out)
 
-	in <- Event{Type: DeleteEvent, Host: "foo"}
-	assert.Equal(t, Event{Type: DeleteEvent, Host: "foo"}, <-out)
+	evIn.eventType = deleteEvent
+	in <- evIn
+	assert.Equal(t, evIn, <-out)
 	assert.Never(t, func() bool {
 		<-out
 		return true
 	}, 500*time.Millisecond, 100*time.Millisecond)
-
 }
