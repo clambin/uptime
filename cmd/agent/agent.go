@@ -4,15 +4,19 @@ import (
 	"context"
 	"errors"
 	"flag"
+	"fmt"
 	"github.com/clambin/uptime/internal/agent"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
+	"os/user"
+	"path/filepath"
 	"syscall"
 )
 
@@ -48,7 +52,7 @@ func main() {
 	}
 	l := slog.New(slog.NewJSONHandler(os.Stderr, &opts))
 
-	c, err := kubernetes.NewForConfig(config.GetConfigOrDie())
+	c, err := kubernetes.NewForConfig(getConfigOrDie(l))
 	if err != nil {
 		l.Error("failed to connect to cluster", "err", err)
 		return
@@ -76,4 +80,35 @@ func main() {
 	l.Info("starting uptime agent", "version", version)
 	a.Run(ctx)
 	l.Info("uptime agent stopped")
+}
+
+func getConfigOrDie(l *slog.Logger) *rest.Config {
+	cfg, err := getConfig()
+	if err != nil {
+		l.Error("unable to get kubeconfig", "err", err)
+		os.Exit(1)
+	}
+	return cfg
+}
+
+func getConfig() (*rest.Config, error) {
+	// try in-cluster config first
+	c, err := rest.InClusterConfig()
+	if err == nil {
+		return c, nil
+	}
+
+	// try to get the user config
+	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
+	if _, ok := os.LookupEnv("HOME"); !ok {
+		u, err := user.Current()
+		if err != nil {
+			return nil, fmt.Errorf("could not get current user: %w", err)
+		}
+		loadingRules.Precedence = append(loadingRules.Precedence, filepath.Join(u.HomeDir, clientcmd.RecommendedHomeDir, clientcmd.RecommendedFileName))
+	}
+	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+		loadingRules,
+		&clientcmd.ConfigOverrides{},
+	).ClientConfig()
 }
