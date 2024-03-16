@@ -41,9 +41,12 @@ func TestAuthenticate(t *testing.T) {
 			}
 			w := httptest.NewRecorder()
 
-			auth.Authenticate(validKey)(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-				w.WriteHeader(http.StatusOK)
-			})).ServeHTTP(w, r)
+			h := auth.Authenticate(validKey)(
+				http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+					w.WriteHeader(http.StatusOK)
+				}),
+			)
+			h.ServeHTTP(w, r)
 
 			assert.Equal(t, tt.wantCode, w.Code)
 		})
