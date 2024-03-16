@@ -11,7 +11,7 @@ type Monitor struct {
 	http.Handler
 	metrics      *HTTPMetrics
 	httpClient   *http.Client
-	hostCheckers *HostCheckers
+	hostCheckers *hostCheckers
 }
 
 func New(metrics *HTTPMetrics, httpClient *http.Client) *Monitor {
@@ -21,7 +21,7 @@ func New(metrics *HTTPMetrics, httpClient *http.Client) *Monitor {
 	m := Monitor{
 		metrics:      metrics,
 		httpClient:   httpClient,
-		hostCheckers: &HostCheckers{hostCheckers: make(map[string]*HostChecker)},
+		hostCheckers: &hostCheckers{hostCheckers: make(map[string]checker)},
 	}
 	m.Handler = m.makeHandler()
 
@@ -45,8 +45,8 @@ func (m *Monitor) addTarget(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h := NewHostChecker(req, m.metrics, m.httpClient, l.With("target", req.Target))
-	m.hostCheckers.Add(req.Target, h, req.Interval)
+	h := newHostChecker(req, m.metrics, m.httpClient, l.With("target", req.Target))
+	m.hostCheckers.add(req.Target, h, req.Interval)
 
 	l.Info("target added", "req", req)
 	w.WriteHeader(http.StatusOK)
@@ -63,7 +63,7 @@ func (m *Monitor) removeTarget(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	m.hostCheckers.Remove(req.Target)
+	m.hostCheckers.remove(req.Target)
 	l.Debug("target removed", "target", req.Target)
 	w.WriteHeader(http.StatusOK)
 }

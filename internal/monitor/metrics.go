@@ -10,27 +10,27 @@ import (
 var _ prometheus.Collector = HTTPMetrics{}
 
 type HTTPMetrics struct {
-	Latency    *prometheus.HistogramVec
-	Up         *prometheus.GaugeVec
-	CertExpiry *prometheus.GaugeVec
+	latency    *prometheus.HistogramVec
+	up         *prometheus.GaugeVec
+	certExpiry *prometheus.GaugeVec
 }
 
 func NewHTTPMetrics() *HTTPMetrics {
 	return &HTTPMetrics{
-		Latency: prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		latency: prometheus.NewHistogramVec(prometheus.HistogramOpts{
 			Namespace: "uptime",
 			Subsystem: "monitor",
 			Name:      "latency",
 			Help:      "site latency",
 			Buckets:   []float64{0.25, 0.5, 0.75, 1, 2, 4},
 		}, []string{"host", "code"}),
-		Up: prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		up: prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Namespace: "uptime",
 			Subsystem: "monitor",
 			Name:      "up",
 			Help:      "site is up/down",
 		}, []string{"host"}),
-		CertExpiry: prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		certExpiry: prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Namespace: "uptime",
 			Subsystem: "monitor",
 			Name:      "certificate_expiry_days",
@@ -45,25 +45,25 @@ var bool2int = map[bool]int{
 }
 
 func (m HTTPMetrics) Observe(measurement HTTPMeasurement) {
-	m.Up.WithLabelValues(measurement.Host).Set(float64(bool2int[measurement.Up]))
+	m.up.WithLabelValues(measurement.Host).Set(float64(bool2int[measurement.Up]))
 	if measurement.Code > 0 {
-		m.Latency.WithLabelValues(measurement.Host, strconv.Itoa(measurement.Code)).Observe(measurement.Latency.Seconds())
+		m.latency.WithLabelValues(measurement.Host, strconv.Itoa(measurement.Code)).Observe(measurement.Latency.Seconds())
 	}
 	if measurement.IsTLS {
-		m.CertExpiry.WithLabelValues(measurement.Host).Set(measurement.TLSExpiry.Hours() / 24)
+		m.certExpiry.WithLabelValues(measurement.Host).Set(measurement.TLSExpiry.Hours() / 24)
 	}
 }
 
 func (m HTTPMetrics) Describe(ch chan<- *prometheus.Desc) {
-	m.Up.Describe(ch)
-	m.Latency.Describe(ch)
-	m.CertExpiry.Describe(ch)
+	m.up.Describe(ch)
+	m.latency.Describe(ch)
+	m.certExpiry.Describe(ch)
 }
 
 func (m HTTPMetrics) Collect(ch chan<- prometheus.Metric) {
-	m.Up.Collect(ch)
-	m.Latency.Collect(ch)
-	m.CertExpiry.Collect(ch)
+	m.up.Collect(ch)
+	m.latency.Collect(ch)
+	m.certExpiry.Collect(ch)
 }
 
 var _ slog.LogValuer = HTTPMeasurement{}

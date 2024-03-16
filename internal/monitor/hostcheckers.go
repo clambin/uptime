@@ -5,22 +5,35 @@ import (
 	"time"
 )
 
-type HostCheckers struct {
-	hostCheckers map[string]*HostChecker
+type checker interface {
+	Run(time.Duration)
+	Cancel()
+	GetRequest() Request
+}
+
+type hostCheckers struct {
+	hostCheckers map[string]checker
 	lock         sync.Mutex
 }
 
-func (h *HostCheckers) Add(target string, hostChecker *HostChecker, interval time.Duration) {
-	_ = h.Remove(target)
-
+func (h *hostCheckers) add(target string, hostChecker checker, interval time.Duration) {
 	h.lock.Lock()
 	defer h.lock.Unlock()
+
+	c, ok := h.hostCheckers[target]
+	if ok {
+		if c.GetRequest().Equals(hostChecker.GetRequest()) {
+			return
+		}
+		c.Cancel()
+		delete(h.hostCheckers, target)
+	}
 
 	h.hostCheckers[target] = hostChecker
 	go hostChecker.Run(interval)
 }
 
-func (h *HostCheckers) Remove(target string) bool {
+func (h *hostCheckers) remove(target string) bool {
 	h.lock.Lock()
 	defer h.lock.Unlock()
 

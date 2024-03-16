@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -43,11 +44,11 @@ func TestHostChecker_Up(t *testing.T) {
 
 			o := observer{}
 			r := Request{
-				Target:     s.URL,
+				Target:     strings.TrimPrefix(s.URL, "https://"),
 				Method:     http.MethodGet,
 				ValidCodes: set.New(tt.valid...),
 			}
-			h := NewHostChecker(r, &o, s.Client(), slog.Default())
+			h := newHostChecker(r, &o, s.Client(), slog.Default())
 			go h.Run(10 * time.Millisecond)
 
 			var m HTTPMeasurement

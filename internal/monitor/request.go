@@ -21,6 +21,13 @@ type Request struct {
 	Interval   time.Duration
 }
 
+func (r Request) Equals(other Request) bool {
+	return r.Target == other.Target &&
+		r.Method == other.Method &&
+		r.ValidCodes.Equals(other.ValidCodes) &&
+		r.Interval == other.Interval
+}
+
 func (r Request) Encode() string {
 	values := make(url.Values)
 	values.Set("target", r.Target)
@@ -29,7 +36,7 @@ func (r Request) Encode() string {
 	}
 	if len(r.ValidCodes) > 0 {
 		codes := make([]string, len(r.ValidCodes))
-		for i, code := range r.ValidCodes.List() {
+		for i, code := range r.ValidCodes.ListOrdered() {
 			codes[i] = strconv.Itoa(code)
 		}
 		values.Set("codes", strings.Join(codes, ","))

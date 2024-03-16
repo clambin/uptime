@@ -141,5 +141,4 @@ func TestRequest_LogValue(t *testing.T) {
 
 	assert.Equal(t, `level=INFO msg=request req.target=http://localhost req.method=HEAD req.codes=[200] req.interval=1m0s
 `, output.String())
-
 }

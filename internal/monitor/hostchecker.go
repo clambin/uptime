@@ -7,7 +7,9 @@ import (
 	"time"
 )
 
-type HostChecker struct {
+var _ checker = &hostChecker{}
+
+type hostChecker struct {
 	req        Request
 	httpClient *http.Client
 	metrics    HTTPObserver
@@ -19,11 +21,11 @@ type HTTPObserver interface {
 	Observe(httpMetrics HTTPMeasurement)
 }
 
-func NewHostChecker(req Request, m HTTPObserver, c *http.Client, l *slog.Logger) *HostChecker {
+func newHostChecker(req Request, m HTTPObserver, c *http.Client, l *slog.Logger) *hostChecker {
 	if c == nil {
 		c = http.DefaultClient
 	}
-	return &HostChecker{
+	return &hostChecker{
 		req:        req,
 		httpClient: c,
 		metrics:    m,
@@ -32,11 +34,15 @@ func NewHostChecker(req Request, m HTTPObserver, c *http.Client, l *slog.Logger)
 	}
 }
 
-func (h *HostChecker) Cancel() {
+func (h *hostChecker) Cancel() {
 	h.shutdown <- struct{}{}
 }
 
-func (h *HostChecker) Run(interval time.Duration) {
+func (h *hostChecker) GetRequest() Request {
+	return h.req
+}
+
+func (h *hostChecker) Run(interval time.Duration) {
 	h.logger.Debug("hostchecker started", "request", h.req)
 	defer h.logger.Debug("hostchecker stopped", "target", h.req.Target)
 	for {
@@ -49,7 +55,7 @@ func (h *HostChecker) Run(interval time.Duration) {
 	}
 }
 
-func (h *HostChecker) ping() HTTPMeasurement {
+func (h *hostChecker) ping() HTTPMeasurement {
 	m := HTTPMeasurement{Host: h.req.Target}
 
 	target := h.req.Target
