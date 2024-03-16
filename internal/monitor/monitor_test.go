@@ -62,8 +62,4 @@ uptime_monitor_up{host="`+h.URL+`"} 0
 # TYPE uptime_monitor_up gauge
 uptime_monitor_up{host="`+h.URL+`"} 0
 `), "uptime_monitor_up"))
-
-	//	assert.Eventually(t, func() bool {
-	//		return testutil.CollectAndCount(metrics) == 0
-	//	}, time.Second, 20*time.Millisecond)
 }
