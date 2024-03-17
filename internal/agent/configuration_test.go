@@ -52,6 +52,7 @@ func TestConfiguration(t *testing.T) {
 			t.Parallel()
 
 			output, err := yaml.Marshal(tt.input)
+			require.NoError(t, err)
 			fp := filepath.Join("testdata", t.Name()+".yaml")
 			if *update {
 				require.NoError(t, os.WriteFile(fp, output, 0644))
@@ -61,7 +62,7 @@ func TestConfiguration(t *testing.T) {
 			assert.Equal(t, string(golden), string(output))
 
 			read, err := LoadFromFile(fp)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, tt.input, read)
 		})
 	}
