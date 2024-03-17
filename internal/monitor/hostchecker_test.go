@@ -49,6 +49,7 @@ func TestHostChecker_Up(t *testing.T) {
 				ValidCodes: set.New(tt.valid...),
 			}
 			h := newHostChecker(r, &o, s.Client(), slog.Default())
+			assert.Equal(t, r, h.GetRequest())
 			go h.Run(10 * time.Millisecond)
 
 			var m HTTPMeasurement

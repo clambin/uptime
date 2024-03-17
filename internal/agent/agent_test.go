@@ -50,6 +50,10 @@ func TestAgent_Run(t *testing.T) {
 	cfg.Monitor = s.URL
 
 	f := fcache.NewFakeControllerSource()
+	m := NewMetrics()
+
+	_, err := NewWithListWatcher(f, Configuration{}, m, l)
+	assert.Error(t, err)
 
 	a, err := NewWithListWatcher(f, cfg, NewMetrics(), l)
 	require.NoError(t, err)
