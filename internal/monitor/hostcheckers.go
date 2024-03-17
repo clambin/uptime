@@ -16,14 +16,14 @@ type hostCheckers struct {
 	lock         sync.Mutex
 }
 
-func (h *hostCheckers) add(target string, hostChecker checker, interval time.Duration) {
+func (h *hostCheckers) add(target string, hostChecker checker, interval time.Duration) bool {
 	h.lock.Lock()
 	defer h.lock.Unlock()
 
 	c, ok := h.hostCheckers[target]
 	if ok {
 		if c.GetRequest().Equals(hostChecker.GetRequest()) {
-			return
+			return false
 		}
 		c.Cancel()
 		delete(h.hostCheckers, target)
@@ -31,6 +31,7 @@ func (h *hostCheckers) add(target string, hostChecker checker, interval time.Dur
 
 	h.hostCheckers[target] = hostChecker
 	go hostChecker.Run(interval)
+	return true
 }
 
 func (h *hostCheckers) remove(target string) bool {

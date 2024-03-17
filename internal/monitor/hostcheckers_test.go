@@ -23,7 +23,8 @@ func TestHostCheckers(t *testing.T) {
 	}
 
 	c1 := fakeChecker{req: req}
-	checkers.add(target, &c1, time.Millisecond)
+	ok := checkers.add(target, &c1, time.Millisecond)
+	assert.True(t, ok)
 
 	assert.Eventually(t, func() bool {
 		return c1.running.Load()
@@ -32,7 +33,8 @@ func TestHostCheckers(t *testing.T) {
 	req.Interval = time.Hour
 	c2 := fakeChecker{req: req}
 
-	checkers.add(target, &c2, time.Millisecond)
+	ok = checkers.add(target, &c2, time.Millisecond)
+	assert.True(t, ok)
 
 	assert.Eventually(t, func() bool {
 		return c2.running.Load()
@@ -40,10 +42,8 @@ func TestHostCheckers(t *testing.T) {
 	assert.False(t, c1.running.Load())
 
 	c3 := fakeChecker{req: req}
-	checkers.add(target, &c3, time.Millisecond)
-	assert.Never(t, func() bool {
-		return c3.running.Load()
-	}, time.Second, 100*time.Millisecond)
+	ok = checkers.add(target, &c3, time.Millisecond)
+	assert.False(t, ok)
 
 	checkers.remove(target)
 	assert.Eventually(t, func() bool {

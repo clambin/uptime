@@ -3,6 +3,7 @@ package monitor
 import (
 	"github.com/clambin/uptime/pkg/logger"
 	"net/http"
+	"time"
 )
 
 var _ http.Handler = &Monitor{}
@@ -16,7 +17,9 @@ type Monitor struct {
 
 func New(metrics *HTTPMetrics, httpClient *http.Client) *Monitor {
 	if httpClient == nil {
-		httpClient = http.DefaultClient
+		httpClient = &http.Client{
+			Timeout: 10 * time.Second,
+		}
 	}
 	m := Monitor{
 		metrics:      metrics,
@@ -46,9 +49,9 @@ func (m *Monitor) addTarget(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h := newHostChecker(req, m.metrics, m.httpClient, l.With("target", req.Target))
-	m.hostCheckers.add(req.Target, h, req.Interval)
-
-	l.Info("target added", "req", req)
+	if added := m.hostCheckers.add(req.Target, h, req.Interval); added {
+		l.Info("target added", "req", req)
+	}
 	w.WriteHeader(http.StatusOK)
 }
 
