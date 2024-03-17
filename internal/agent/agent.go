@@ -15,19 +15,6 @@ import (
 	"time"
 )
 
-type Event struct {
-	Type        EventType
-	Host        string
-	Annotations map[string]string
-}
-
-type EventType string
-
-const (
-	AddEvent    EventType = "ADD"
-	DeleteEvent EventType = "DELETE"
-)
-
 type Agent struct {
 	ingressInformer *informer.Informer
 	filter          filter
@@ -49,15 +36,14 @@ func NewWithListWatcher(lw cache.ListerWatcher, cfg Configuration, metrics *Metr
 		return nil, errors.New("missing monitor URL")
 	}
 
-	filterIn := make(chan Event)
-	reSenderIn := make(chan Event)
-	senderIn := make(chan Event)
+	filterIn := make(chan event)
+	reSenderIn := make(chan event)
+	senderIn := make(chan event)
 
 	i, err := informer.New(lw, resyncPeriod, new(netv1.Ingress), &ingressWatcher{
-		out:       filterIn,
-		metrics:   metrics,
-		logger:    logger.With("component", "informer"),
-		hostnames: make(map[string]string),
+		out:     filterIn,
+		metrics: metrics,
+		logger:  logger.With("component", "informer"),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("informer: %w", err)
@@ -74,7 +60,7 @@ func NewWithListWatcher(lw cache.ListerWatcher, cfg Configuration, metrics *Metr
 		reSender: reSender{
 			in:     reSenderIn,
 			out:    senderIn,
-			events: make(map[string]Event),
+			events: make(map[string]event),
 		},
 		sender: sender{
 			in:            senderIn,

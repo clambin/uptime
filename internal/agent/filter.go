@@ -6,8 +6,8 @@ import (
 )
 
 type filter struct {
-	in            <-chan Event
-	out           chan<- Event
+	in            <-chan event
+	out           chan<- event
 	configuration Configuration
 	logger        *slog.Logger
 }
@@ -30,25 +30,30 @@ const (
 	traefikExternalEndpoint   = "websecure"
 )
 
-func (f *filter) shouldForward(ev Event) bool {
+func (f *filter) shouldForward(ev event) bool {
 	if !f.hasAnnotations(ev) {
-		f.logger.Debug("host skipped: missing annotations", "host", ev.Host)
+		f.logger.Debug("ingress skipped: missing annotations", "event", ev)
 		return false
 	}
-	if !f.noSkip(ev) {
-		f.logger.Debug("host skipped: on skip list", "host", ev.Host)
+	if f.skip(ev) {
+		f.logger.Debug("ingress skipped: host on skip list", "event", ev)
 		return false
 	}
 	return true
 }
 
-func (f *filter) hasAnnotations(ev Event) bool {
-	// TODO: make this configurable (how?)
-	value, ok := ev.Annotations[traefikEndpointAnnotation]
-	return ok && value == traefikExternalEndpoint
+func (f *filter) hasAnnotations(ev event) bool {
+	// TODO: make this configurable
+	return ev.hasAnnotation(traefikEndpointAnnotation, traefikExternalEndpoint)
 }
 
-func (f *filter) noSkip(ev Event) bool {
-	cfg, ok := f.configuration.Hosts[ev.Host]
-	return !ok || !cfg.Skip
+func (f *filter) skip(ev event) bool {
+	// TODO: if any of the hosts are on the skip list, we skip the entire ingress. make it more granular?
+	for _, host := range ev.targetHosts() {
+		cfg, ok := f.configuration.Hosts[host]
+		if ok && cfg.Skip {
+			return true
+		}
+	}
+	return false
 }

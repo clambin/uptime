@@ -8,8 +8,8 @@ import (
 )
 
 func TestFilter_Run(t *testing.T) {
-	in := make(chan Event)
-	out := make(chan Event, 1)
+	in := make(chan event)
+	out := make(chan event, 1)
 	f := filter{
 		in:  in,
 		out: out,
@@ -19,44 +19,40 @@ func TestFilter_Run(t *testing.T) {
 	defer cancel()
 	go f.Run(ctx)
 
-	in <- Event{
-		Host:        "foo",
-		Annotations: map[string]string{traefikEndpointAnnotation: traefikExternalEndpoint},
-	}
-
-	ev := <-out
-	assert.Equal(t, "foo", ev.Host)
+	evIn := event{eventType: addEvent, ingress: &validIngress}
+	in <- evIn
+	assert.Equal(t, evIn, <-out)
 }
 
 func TestFilter_shouldForward(t *testing.T) {
 	tests := []struct {
 		name   string
 		config Configuration
-		event  Event
+		event  event
 		want   assert.BoolAssertionFunc
 	}{
 		{
 			name:   "pass",
 			config: DefaultConfiguration,
-			event:  Event{Type: AddEvent, Host: "foo", Annotations: map[string]string{traefikEndpointAnnotation: traefikExternalEndpoint}},
+			event:  event{eventType: addEvent, ingress: &validIngress},
 			want:   assert.True,
 		},
 		{
 			name:   "no annotations",
 			config: DefaultConfiguration,
-			event:  Event{Type: AddEvent, Host: "foo"},
+			event:  event{eventType: addEvent, ingress: &invalidIngress},
 			want:   assert.False,
 		},
 		{
 			name:   "no skip",
-			config: Configuration{Hosts: map[string]EndpointConfiguration{"foo": DefaultGlobalConfiguration}},
-			event:  Event{Type: AddEvent, Host: "foo", Annotations: map[string]string{traefikEndpointAnnotation: traefikExternalEndpoint}},
+			config: Configuration{Hosts: map[string]EndpointConfiguration{"foo.com": DefaultGlobalConfiguration}},
+			event:  event{eventType: addEvent, ingress: &validIngress},
 			want:   assert.True,
 		},
 		{
 			name:   "skip",
-			config: Configuration{Hosts: map[string]EndpointConfiguration{"foo": {Skip: true}}},
-			event:  Event{Type: AddEvent, Host: "foo", Annotations: map[string]string{traefikEndpointAnnotation: traefikExternalEndpoint}},
+			config: Configuration{Hosts: map[string]EndpointConfiguration{"example.com": {Skip: true}}},
+			event:  event{eventType: addEvent, ingress: &validIngress},
 			want:   assert.False,
 		},
 	}

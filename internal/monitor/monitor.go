@@ -3,7 +3,7 @@ package monitor
 import (
 	"github.com/clambin/uptime/pkg/logger"
 	"net/http"
-	"sync"
+	"time"
 )
 
 var _ http.Handler = &Monitor{}
@@ -12,18 +12,19 @@ type Monitor struct {
 	http.Handler
 	metrics      *HTTPMetrics
 	httpClient   *http.Client
-	lock         sync.Mutex
-	hostCheckers HostCheckers
+	hostCheckers *hostCheckers
 }
 
 func New(metrics *HTTPMetrics, httpClient *http.Client) *Monitor {
 	if httpClient == nil {
-		httpClient = http.DefaultClient
+		httpClient = &http.Client{
+			Timeout: 10 * time.Second,
+		}
 	}
 	m := Monitor{
 		metrics:      metrics,
 		httpClient:   httpClient,
-		hostCheckers: make(HostCheckers),
+		hostCheckers: &hostCheckers{hostCheckers: make(map[string]checker)},
 	}
 	m.Handler = m.makeHandler()
 
@@ -47,13 +48,11 @@ func (m *Monitor) addTarget(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	m.lock.Lock()
-	defer m.lock.Unlock()
-
-	h := NewHostChecker(req.Target, req.Method, m.metrics, m.httpClient, l.With("target", req.Target), req.ValidCode...)
-	m.hostCheckers.Add(req.Target, h, req.Interval)
-
-	l.Info("target added", "req", req)
+	h := newHostChecker(req, m.metrics, m.httpClient, l.With("target", req.Target))
+	if added := m.hostCheckers.add(req.Target, h, req.Interval); added {
+		l.Info("target added", "req", req)
+	}
+	w.WriteHeader(http.StatusOK)
 }
 
 func (m *Monitor) removeTarget(w http.ResponseWriter, r *http.Request) {
@@ -67,9 +66,7 @@ func (m *Monitor) removeTarget(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	m.lock.Lock()
-	defer m.lock.Unlock()
-
-	m.hostCheckers.Remove(req.Target)
+	m.hostCheckers.remove(req.Target)
 	l.Debug("target removed", "target", req.Target)
+	w.WriteHeader(http.StatusOK)
 }

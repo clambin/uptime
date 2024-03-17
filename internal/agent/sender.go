@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"fmt"
+	"github.com/clambin/go-common/set"
 	"github.com/clambin/uptime/internal/monitor"
 	"github.com/clambin/uptime/pkg/retry"
 	"io"
@@ -12,7 +13,7 @@ import (
 )
 
 type sender struct {
-	in            <-chan Event
+	in            <-chan event
 	configuration Configuration
 	metrics       *Metrics
 	httpClient    *http.Client
@@ -30,25 +31,49 @@ func (s sender) Run(ctx context.Context) {
 	}
 }
 
-func (s sender) process(ctx context.Context, ev Event) {
-	l := s.logger.With("target", ev.Host, "eventType", ev.Type)
+func (s sender) process(ctx context.Context, ev event) {
+	l := s.logger.With("event", ev)
 	l.Debug("sending request")
-	waiter := retry.MultiplyingWaiter{InitialWait: time.Second, MaxWait: time.Millisecond, Factor: 2}
-	for {
-		err := s.send(ctx, ev)
-		if err == nil {
-			return
-		}
-		l.Warn("request failed. waiting to retry", "err", err)
-		if waiter.Wait(ctx) != nil {
-			return
+
+	method := getMethod(ev.eventType)
+	for _, request := range s.makeRequests(ev) {
+		waiter := retry.MultiplyingWaiter{InitialWait: time.Second, MaxWait: time.Millisecond, Factor: 2}
+		for {
+			err := s.send(ctx, method, request)
+			if err == nil {
+				return
+			}
+			l.Warn("request failed. waiting to retry", "err", err)
+			if waiter.Wait(ctx) != nil {
+				return
+			}
 		}
 	}
 }
 
-func (s sender) makeRequest(ev Event) monitor.Request {
+func getMethod(ev eventType) string {
+	switch ev {
+	case addEvent:
+		return http.MethodPost
+	case deleteEvent:
+		return http.MethodDelete
+	default:
+		panic("invalid event type: " + ev)
+	}
+}
+
+func (s sender) makeRequests(ev event) []monitor.Request {
+	targets := ev.targetHosts()
+	requests := make([]monitor.Request, len(targets))
+	for i := range targets {
+		requests[i] = s.makeRequest(targets[i])
+	}
+	return requests
+}
+
+func (s sender) makeRequest(host string) monitor.Request {
 	ep := s.configuration.Global
-	if custom, ok := s.configuration.Hosts[ev.Host]; ok {
+	if custom, ok := s.configuration.Hosts[host]; ok {
 		if custom.Method != "" {
 			ep.Method = custom.Method
 		}
@@ -60,16 +85,16 @@ func (s sender) makeRequest(ev Event) monitor.Request {
 		}
 	}
 	return monitor.Request{
-		Target:    ev.Host,
-		Method:    ep.Method,
-		ValidCode: ep.ValidStatusCodes,
-		Interval:  ep.Interval,
+		Target:     host,
+		Method:     ep.Method,
+		ValidCodes: set.New(ep.ValidStatusCodes...),
+		Interval:   ep.Interval,
 	}
 }
 
-func (s sender) send(ctx context.Context, ev Event) error {
+func (s sender) send(ctx context.Context, method string, request monitor.Request) error {
 	start := time.Now()
-	r, _ := http.NewRequestWithContext(ctx, getMethod(ev.Type), s.configuration.Monitor+"/target?"+s.makeRequest(ev).Encode(), nil)
+	r, _ := http.NewRequestWithContext(ctx, method, s.configuration.Monitor+"/target?"+request.Encode(), nil)
 	if s.configuration.Token != "" {
 		r.Header.Set("Authorization", "Bearer "+s.configuration.Token)
 	}
@@ -88,15 +113,4 @@ func (s sender) send(ctx context.Context, ev Event) error {
 	}
 
 	return nil
-}
-
-func getMethod(ev EventType) string {
-	switch ev {
-	case AddEvent:
-		return http.MethodPost
-	case DeleteEvent:
-		return http.MethodDelete
-	default:
-		panic("invalid event type: " + ev)
-	}
 }

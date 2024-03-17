@@ -15,25 +15,25 @@ type Metrics struct {
 	Latency       *prometheus.HistogramVec
 }
 
-func NewMetrics(namespace, subsystem string) *Metrics {
+func NewMetrics() *Metrics {
 	return &Metrics{
 		IngressEvents: prometheus.NewCounterVec(prometheus.CounterOpts{
-			Namespace:   namespace,
-			Subsystem:   subsystem,
+			Namespace:   "uptime",
+			Subsystem:   "agent",
 			Name:        "ingress_events_count",
 			Help:        "number of ingress events received from kubernetes",
 			ConstLabels: nil,
-		}, []string{"host", "type"}),
+		}, []string{"name", "namespace", "type"}),
 		Requests: prometheus.NewCounterVec(prometheus.CounterOpts{
-			Namespace:   namespace,
-			Subsystem:   subsystem,
+			Namespace:   "uptime",
+			Subsystem:   "agent",
 			Name:        "requests_count",
 			Help:        "number of requests sent to the monitor",
 			ConstLabels: nil,
 		}, []string{"code"}),
 		Latency: prometheus.NewHistogramVec(prometheus.HistogramOpts{
-			Namespace: namespace,
-			Subsystem: subsystem,
+			Namespace: "uptime",
+			Subsystem: "agent",
 			Name:      "request_latency",
 			Help:      "latency of requests sent to the monitor",
 			Buckets:   []float64{0.01, 0.1, 0.2, 0.5, 1, 2},
@@ -41,8 +41,8 @@ func NewMetrics(namespace, subsystem string) *Metrics {
 	}
 }
 
-func (m Metrics) ObserveEvent(ev Event) {
-	m.IngressEvents.WithLabelValues(ev.Host, strings.ToLower(string(ev.Type))).Add(1)
+func (m Metrics) ObserveEvent(ev event) {
+	m.IngressEvents.WithLabelValues(ev.name(), ev.namespace(), strings.ToLower(string(ev.eventType))).Add(1)
 }
 
 func (m Metrics) ObserveRequest(code int, latency time.Duration) {

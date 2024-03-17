@@ -10,16 +10,16 @@ import (
 )
 
 func TestMetrics(t *testing.T) {
-	m := NewMetrics("uptime", "agent")
+	m := NewMetrics()
 
-	ev := Event{Host: "example.com", Type: AddEvent}
+	ev := event{eventType: addEvent, ingress: &validIngress}
 	m.ObserveEvent(ev)
 	m.ObserveRequest(http.StatusOK, time.Second)
 
 	assert.NoError(t, testutil.CollectAndCompare(m, bytes.NewBufferString(`
 # HELP uptime_agent_ingress_events_count number of ingress events received from kubernetes
 # TYPE uptime_agent_ingress_events_count counter
-uptime_agent_ingress_events_count{host="example.com",type="add"} 1
+uptime_agent_ingress_events_count{name="valid",namespace="foo",type="add"} 1
 # HELP uptime_agent_request_latency latency of requests sent to the monitor
 # TYPE uptime_agent_request_latency histogram
 uptime_agent_request_latency_bucket{code="200",le="0.01"} 0

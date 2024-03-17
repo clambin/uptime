@@ -6,9 +6,9 @@ import (
 )
 
 type reSender struct {
-	in     <-chan Event
-	out    chan<- Event
-	events map[string]Event
+	in     <-chan event
+	out    chan<- event
+	events map[string]event
 }
 
 func (r *reSender) Run(ctx context.Context, interval time.Duration) {
@@ -18,11 +18,12 @@ func (r *reSender) Run(ctx context.Context, interval time.Duration) {
 	for {
 		select {
 		case ev := <-r.in:
-			switch ev.Type {
-			case AddEvent:
-				r.events[ev.Host] = ev
-			case DeleteEvent:
-				delete(r.events, ev.Host)
+			eventKey := ev.namespace() + ":" + ev.name()
+			switch ev.eventType {
+			case addEvent:
+				r.events[eventKey] = ev
+			case deleteEvent:
+				delete(r.events, eventKey)
 			}
 			r.out <- ev
 		case <-ticker.C:

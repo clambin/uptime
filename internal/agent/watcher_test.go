@@ -3,36 +3,38 @@ package agent
 import (
 	"github.com/stretchr/testify/assert"
 	netv1 "k8s.io/api/networking/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"log/slog"
 	"testing"
 )
 
 func TestIngressWatcher(t *testing.T) {
-	ch := make(chan Event)
+	ch := make(chan event)
 	w := ingressWatcher{
-		out:       ch,
-		logger:    slog.Default(),
-		hostnames: make(map[string]string),
+		out:    ch,
+		logger: slog.Default(),
 	}
 
-	ingress := netv1.Ingress{
-		ObjectMeta: v1.ObjectMeta{Name: "foo", Namespace: "bar", Annotations: map[string]string{traefikEndpointAnnotation: traefikExternalEndpoint}},
-		Spec:       netv1.IngressSpec{Rules: []netv1.IngressRule{{Host: "example.com"}}},
-	}
-
-	go w.OnAdd(&ingress, true)
+	go w.OnAdd(&validIngress, true)
 	ev := <-ch
-	assert.Equal(t, AddEvent, ev.Type)
+	assert.Equal(t, addEvent, ev.eventType)
 
-	go w.OnDelete(&ingress)
+	go w.OnDelete(&validIngress)
 	ev = <-ch
-	assert.Equal(t, DeleteEvent, ev.Type)
+	assert.Equal(t, deleteEvent, ev.eventType)
 
-	ingress2 := ingress
-	ingress2.Spec.Rules = []netv1.IngressRule{{Host: "example.com/foo"}}
+	ingress2 := netv1.Ingress{
+		ObjectMeta: v1.ObjectMeta{
+			Name:        "valid",
+			Namespace:   "foo",
+			Annotations: map[string]string{traefikEndpointAnnotation: traefikExternalEndpoint},
+		},
+		Spec: netv1.IngressSpec{
+			Rules: []netv1.IngressRule{{Host: "example.com/foo"}},
+		},
+	}
 
-	go w.OnUpdate(&ingress, &ingress2)
-	assert.Equal(t, DeleteEvent, (<-ch).Type)
-	assert.Equal(t, AddEvent, (<-ch).Type)
+	go w.OnUpdate(&validIngress, &ingress2)
+	assert.Equal(t, deleteEvent, (<-ch).eventType)
+	assert.Equal(t, addEvent, (<-ch).eventType)
 }
