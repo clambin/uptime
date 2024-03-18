@@ -13,9 +13,16 @@ jobs:
   build:
     needs:
       - test
+    strategy:
+      matrix:
+        cmd:
+          - agent
+          - monitor
     uses: clambin/workflows/.github/workflows/build.yaml@main
     with:
-      target: change-me
+      target: ${{ matrix.cmd }}
+      image: uptime-${{ matrix.cmd }}
+      dockerfile: build/Dockerfile-${{ matrix.cmd }}
   release:
     needs:
       - build
