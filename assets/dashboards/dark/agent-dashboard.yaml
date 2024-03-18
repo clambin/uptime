@@ -1,0 +1,53 @@
+apiVersion: k8s.kevingomez.fr/v1
+kind: GrafanaDashboard
+metadata:
+  name: agent
+  namespace: development
+  annotations:
+    dark/folder: "uptime"
+spec:
+  title: Agent Dashboard
+  #editable: true
+  shared_crosshair: true
+  tags: [generated, yaml, uptime]
+  auto_refresh: 1m
+
+  variables:
+    - interval:
+        name: quantile
+        label: quantile
+        default: 0.9
+        values: [0.5, 0.9, 0.95]
+
+  rows:
+    - name: Prometheus
+      panels:
+        - timeseries:
+            title: agent requests
+            datasource: Prometheus
+            targets:
+                    - prometheus:
+                        query: avg (increase(uptime_agent_request_latency_count{code="200"}[$__rate_interval]))
+                        legend: success
+                    - prometheus:
+                        query: avg (increase(uptime_agent_request_latency_count{code!="200"}[$__rate_interval]))
+                        legend: error - {{code}}
+
+        - timeseries:
+            title: agent request latency
+            datasource: Prometheus
+            targets:
+                    - prometheus:
+                        query: histogram_quantile($quantile, sum by (le) (rate(uptime_agent_request_latency_bucket[10m])))
+                        legend: $quantile
+                    - prometheus:
+                        query: sum (uptime_agent_request_latency_sum / uptime_agent_request_latency_count)
+                        legend: average
+
+        - timeseries:
+            title: ingress changes
+            datasource: Prometheus
+            targets:
+                    - prometheus:
+                        query: sum by (host) (increase(uptime_agent_ingress_events_count[$__rate_interval])) > 0 
+                        legend: $quantile

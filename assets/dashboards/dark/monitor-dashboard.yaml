@@ -1,0 +1,150 @@
+apiVersion: k8s.kevingomez.fr/v1
+kind: GrafanaDashboard
+metadata:
+    annotations:
+        dark/folder: uptime
+    name: monitor
+    namespace: development
+spec:
+    title: Hosts Dashboard
+    uid: e7f2739e-c675-4ac8-b215-158d23bec533
+    editable: true
+    shared_crosshair: false
+    tags: [generated,yaml,uptime]
+    auto_refresh: 1m
+    time:
+        - now-6h
+        - now
+    variables:
+        - query:
+            name: host
+            request: label_values(uptime_monitor_up,host)
+            include_all: true
+            default_all: true
+            hide: label
+        - custom:
+            name: quantile
+            default: "0.5"
+            values_map:
+                "0.5": "0.5"
+                "0.8": "0.8"
+                "0.9": "0.9"
+                "0.95": "0.95"
+            include_all: false
+    rows:
+        - name: status
+          panels:
+            - stat:
+                title: ""
+                span: 12
+                targets:
+                    - prometheus:
+                        query: max by (host) (uptime_monitor_up)
+                        legend: '{{host}}'
+                        ref: A
+                        instant: true
+                        interval_factor: 0
+                orientation: vertical
+                text: auto
+                value_type: last_non_null
+                color_mode: value
+                threshold_mode: absolute
+                thresholds:
+                    - color: green
+        - name: $host
+          repeat_for: host
+          panels:
+            - timeseries:
+                title: ""
+                span: 2
+                targets:
+                    - prometheus:
+                        query: max by (host) (uptime_monitor_up{host=~"$host"})
+                        legend: up
+                        ref: A
+                        interval_factor: 0
+                    - prometheus:
+                        query: 1 - max by (host) (uptime_monitor_up{host=~"$host"})
+                        legend: down
+                        ref: B
+                        interval_factor: 0
+                legend: [hide]
+                visualization:
+                    gradient_mode: none
+                    tooltip: single_series
+                    stack: none
+                    fill_opacity: 0
+                    point_size: 5
+                    line_width: 1
+                axis:
+                    min: 0
+                    max: 1
+                    display: auto
+                    scale: linear
+                overrides:
+                    - match: {field_name: down}
+                      properties:
+                        color: red
+            - timeseries:
+                title: Latency (quantile)
+                span: 4
+                targets:
+                    - prometheus:
+                        query: avg by (host, code) (histogram_quantile($quantile, rate(uptime_monitor_latency_bucket{host=~"$host"}[1h])))
+                        legend: '{{code}}'
+                        ref: A
+                        interval_factor: 0
+                legend: [hide]
+                visualization:
+                    gradient_mode: none
+                    tooltip: single_series
+                    stack: none
+                    fill_opacity: 0
+                    point_size: 5
+                    line_interpolation: linear
+                    line_width: 1
+                axis:
+                    display: auto
+                    scale: linear
+                    unit: s
+            - timeseries:
+                title: Latency (avg)
+                span: 3
+                targets:
+                    - prometheus:
+                        query: avg by(host, code) (uptime_monitor_latency_sum{host=~"$host"} / uptime_monitor_latency_count{host=~"$host"})
+                        legend: '{{code}}'
+                        ref: A
+                        interval_factor: 0
+                legend: [hide]
+                visualization:
+                    gradient_mode: none
+                    tooltip: single_series
+                    stack: none
+                    fill_opacity: 0
+                    point_size: 5
+                    line_interpolation: linear
+                    line_width: 1
+                axis:
+                    display: auto
+                    scale: linear
+                    unit: s
+            - stat:
+                title: Certificate expiry
+                span: 2
+                targets:
+                    - prometheus:
+                        query: uptime_monitor_certificate_expiry_days{host=~"$host"}
+                        legend: __auto
+                        ref: A
+                        instant: true
+                        interval_factor: 0
+                unit: d
+                sparkline: true
+                orientation: horizontal
+                text: auto
+                value_type: last_non_null
+                color_mode: value
+                threshold_mode: absolute
+                thresholds:
+                    - color: green
