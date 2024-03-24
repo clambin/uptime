@@ -12,7 +12,7 @@ import (
 )
 
 func TestHTTPMetrics_Observe(t *testing.T) {
-	metrics := NewHTTPMetrics()
+	metrics := NewHTTPMetrics("uptime", "monitor", nil)
 	assert.NoError(t, testutil.CollectAndCompare(metrics, bytes.NewBufferString(``)))
 
 	metrics.Observe(HTTPMeasurement{

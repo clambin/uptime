@@ -14,19 +14,21 @@ type HTTPMetrics struct {
 	certExpiry *prometheus.GaugeVec
 }
 
-func NewHTTPMetrics() *HTTPMetrics {
+func NewHTTPMetrics(namespace, subsystem string, labels map[string]string) *HTTPMetrics {
 	return &HTTPMetrics{
 		up: prometheus.NewGaugeVec(prometheus.GaugeOpts{
-			Namespace: "uptime",
-			Subsystem: "monitor",
-			Name:      "up",
-			Help:      "site is up/down",
+			Namespace:   namespace,
+			Subsystem:   subsystem,
+			Name:        "up",
+			Help:        "site is up/down",
+			ConstLabels: labels,
 		}, []string{"host"}),
 		certExpiry: prometheus.NewGaugeVec(prometheus.GaugeOpts{
-			Namespace: "uptime",
-			Subsystem: "monitor",
-			Name:      "certificate_expiry_days",
-			Help:      "number of days before the certificate expires",
+			Namespace:   namespace,
+			Subsystem:   subsystem,
+			Name:        "certificate_expiry_days",
+			Help:        "number of days before the certificate expires",
+			ConstLabels: labels,
 		}, []string{"host"}),
 	}
 }

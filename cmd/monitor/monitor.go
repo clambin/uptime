@@ -47,9 +47,9 @@ func main() {
 		}
 	}()
 
-	httpClientMetrics := metrics.NewRequestHistogramMetrics("uptime", "monitor", map[string]string{"component": "client"}, clientMetricBuckets...)
-	serverMetrics := metrics.NewRequestSummaryMetrics("uptime", "monitor", map[string]string{"component": "server"})
-	monitorMetrics := monitor.NewHTTPMetrics()
+	httpClientMetrics := metrics.NewRequestHistogramMetrics("uptime", "monitor_client", nil, clientMetricBuckets...)
+	serverMetrics := metrics.NewRequestSummaryMetrics("uptime", "monitor_server", nil)
+	monitorMetrics := monitor.NewHTTPMetrics("uptime", "monitor", nil)
 	prometheus.MustRegister(httpClientMetrics, serverMetrics, monitorMetrics)
 
 	s := http.Server{
