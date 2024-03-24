@@ -1,47 +1,45 @@
 package monitor
 
 import (
+	"github.com/clambin/uptime/internal/monitor/handlers"
+	"log/slog"
+	"net/http"
 	"sync"
-	"time"
 )
 
-type checker interface {
-	Run(time.Duration)
-	Cancel()
-	GetRequest() Request
-}
-
 type hostCheckers struct {
-	hostCheckers map[string]checker
+	metrics      *HostMetrics
+	httpClient   *http.Client
 	lock         sync.Mutex
+	hostCheckers map[string]*hostChecker
 }
 
-func (h *hostCheckers) add(target string, hostChecker checker, interval time.Duration) bool {
+func (h *hostCheckers) Add(request handlers.Request, logger *slog.Logger) {
 	h.lock.Lock()
 	defer h.lock.Unlock()
 
-	c, ok := h.hostCheckers[target]
+	c, ok := h.hostCheckers[request.Target]
 	if ok {
-		if c.GetRequest().Equals(hostChecker.GetRequest()) {
-			return false
+		if c.GetRequest().Equals(request) {
+			return
 		}
 		c.Cancel()
-		delete(h.hostCheckers, target)
+		delete(h.hostCheckers, request.Target)
 	}
 
-	h.hostCheckers[target] = hostChecker
-	go hostChecker.Run(interval)
-	return true
+	hc := newHostChecker(request, h.metrics, h.httpClient, logger.With("target", request.Target))
+
+	h.hostCheckers[request.Target] = hc
+	go hc.Run(request.Interval)
 }
 
-func (h *hostCheckers) remove(target string) bool {
+func (h *hostCheckers) Remove(request handlers.Request) {
 	h.lock.Lock()
 	defer h.lock.Unlock()
 
-	c, ok := h.hostCheckers[target]
+	c, ok := h.hostCheckers[request.Target]
 	if ok {
 		c.Cancel()
-		delete(h.hostCheckers, target)
+		delete(h.hostCheckers, request.Target)
 	}
-	return ok
 }

@@ -2,7 +2,7 @@ package agent
 
 import (
 	"context"
-	"github.com/clambin/uptime/internal/monitor"
+	"github.com/clambin/uptime/internal/monitor/handlers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	netv1 "k8s.io/api/networking/v1"
@@ -121,7 +121,7 @@ func (s *server) getHost(target string) (bool, bool) {
 }
 
 func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	req, err := monitor.ParseRequest(r)
+	req, err := handlers.ParseRequest(r)
 	if err != nil {
 		http.Error(w, "", http.StatusBadRequest)
 		return

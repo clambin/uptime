@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/clambin/go-common/set"
-	"github.com/clambin/uptime/internal/monitor"
+	"github.com/clambin/uptime/internal/monitor/handlers"
 	"github.com/clambin/uptime/pkg/retry"
 	"io"
 	"log/slog"
@@ -61,16 +61,16 @@ func getMethod(ev eventType) string {
 	}
 }
 
-func (s sender) makeRequests(ev event) []monitor.Request {
+func (s sender) makeRequests(ev event) []handlers.Request {
 	targets := ev.targetHosts()
-	requests := make([]monitor.Request, len(targets))
+	requests := make([]handlers.Request, len(targets))
 	for i := range targets {
 		requests[i] = s.makeRequest(targets[i])
 	}
 	return requests
 }
 
-func (s sender) makeRequest(host string) monitor.Request {
+func (s sender) makeRequest(host string) handlers.Request {
 	ep := s.configuration.Global
 	if custom, ok := s.configuration.Hosts[host]; ok {
 		if custom.Method != "" {
@@ -83,7 +83,7 @@ func (s sender) makeRequest(host string) monitor.Request {
 			ep.ValidStatusCodes = custom.ValidStatusCodes
 		}
 	}
-	return monitor.Request{
+	return handlers.Request{
 		Target:     host,
 		Method:     ep.Method,
 		ValidCodes: set.New(ep.ValidStatusCodes...),
@@ -91,7 +91,7 @@ func (s sender) makeRequest(host string) monitor.Request {
 	}
 }
 
-func (s sender) send(ctx context.Context, method string, request monitor.Request) error {
+func (s sender) send(ctx context.Context, method string, request handlers.Request) error {
 	r, _ := http.NewRequestWithContext(ctx, method, s.configuration.Monitor+"/target?"+request.Encode(), nil)
 	if s.configuration.Token != "" {
 		r.Header.Set("Authorization", "Bearer "+s.configuration.Token)

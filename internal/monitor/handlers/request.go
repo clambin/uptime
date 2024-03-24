@@ -1,4 +1,4 @@
-package monitor
+package handlers
 
 import (
 	"errors"

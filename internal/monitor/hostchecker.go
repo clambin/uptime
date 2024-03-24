@@ -1,16 +1,15 @@
 package monitor
 
 import (
+	"github.com/clambin/uptime/internal/monitor/handlers"
 	"log/slog"
 	"net/http"
 	"strings"
 	"time"
 )
 
-var _ checker = &hostChecker{}
-
 type hostChecker struct {
-	req        Request
+	req        handlers.Request
 	httpClient *http.Client
 	metrics    HTTPObserver
 	shutdown   chan struct{}
@@ -21,7 +20,7 @@ type HTTPObserver interface {
 	Observe(httpMetrics HTTPMeasurement)
 }
 
-func newHostChecker(req Request, m HTTPObserver, c *http.Client, l *slog.Logger) *hostChecker {
+func newHostChecker(req handlers.Request, m HTTPObserver, c *http.Client, l *slog.Logger) *hostChecker {
 	if c == nil {
 		c = http.DefaultClient
 	}
@@ -38,7 +37,7 @@ func (h *hostChecker) Cancel() {
 	h.shutdown <- struct{}{}
 }
 
-func (h *hostChecker) GetRequest() Request {
+func (h *hostChecker) GetRequest() handlers.Request {
 	return h.req
 }
 

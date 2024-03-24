@@ -3,7 +3,7 @@ package agent
 import (
 	"context"
 	"github.com/clambin/go-common/set"
-	"github.com/clambin/uptime/internal/monitor"
+	"github.com/clambin/uptime/internal/monitor/handlers"
 	"github.com/stretchr/testify/assert"
 	"log/slog"
 	"net/http"
@@ -17,13 +17,13 @@ func TestSender_makeRequests(t *testing.T) {
 		name   string
 		config Configuration
 		event  event
-		want   []monitor.Request
+		want   []handlers.Request
 	}{
 		{
 			name:   "global",
 			config: DefaultConfiguration,
 			event:  event{eventType: addEvent, ingress: &validIngress},
-			want: []monitor.Request{{
+			want: []handlers.Request{{
 				Target:     "example.com",
 				Method:     DefaultGlobalConfiguration.Method,
 				ValidCodes: set.New(DefaultGlobalConfiguration.ValidStatusCodes...),
@@ -39,7 +39,7 @@ func TestSender_makeRequests(t *testing.T) {
 				},
 			},
 			event: event{eventType: addEvent, ingress: &validIngress},
-			want: []monitor.Request{{
+			want: []handlers.Request{{
 				Target:     "example.com",
 				Method:     http.MethodHead,
 				ValidCodes: set.New(DefaultGlobalConfiguration.ValidStatusCodes...),
@@ -55,7 +55,7 @@ func TestSender_makeRequests(t *testing.T) {
 				},
 			},
 			event: event{eventType: addEvent, ingress: &validIngress},
-			want: []monitor.Request{{
+			want: []handlers.Request{{
 				Target:     "example.com",
 				Method:     DefaultGlobalConfiguration.Method,
 				ValidCodes: set.New(DefaultGlobalConfiguration.ValidStatusCodes...),
@@ -71,7 +71,7 @@ func TestSender_makeRequests(t *testing.T) {
 				},
 			},
 			event: event{eventType: addEvent, ingress: &validIngress},
-			want: []monitor.Request{{
+			want: []handlers.Request{{
 				Target:     "example.com",
 				Method:     DefaultGlobalConfiguration.Method,
 				ValidCodes: set.New(http.StatusUnauthorized),

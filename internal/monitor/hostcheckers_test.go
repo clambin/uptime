@@ -2,70 +2,45 @@ package monitor
 
 import (
 	"github.com/clambin/go-common/set"
+	"github.com/clambin/uptime/internal/monitor/handlers"
 	"github.com/stretchr/testify/assert"
+	"log/slog"
 	"net/http"
-	"sync/atomic"
 	"testing"
 	"time"
 )
 
 func TestHostCheckers(t *testing.T) {
 	const target = "example.com"
-	req := Request{
+	req := handlers.Request{
 		Target:     target,
 		Method:     http.MethodGet,
 		ValidCodes: set.New(http.StatusOK),
 		Interval:   time.Minute,
 	}
+	l := slog.Default()
 
 	checkers := hostCheckers{
-		hostCheckers: make(map[string]checker),
+		metrics:      NewHostMetrics("", "", nil),
+		hostCheckers: make(map[string]*hostChecker),
 	}
 
-	c1 := fakeChecker{req: req}
-	ok := checkers.add(target, &c1, time.Millisecond)
+	checkers.Add(req, l)
+	p, ok := checkers.hostCheckers[req.Target]
 	assert.True(t, ok)
 
-	assert.Eventually(t, func() bool {
-		return c1.running.Load()
-	}, time.Second, time.Millisecond)
+	checkers.Add(req, l)
+	p2, ok := checkers.hostCheckers[req.Target]
+	assert.True(t, ok)
+	assert.Equal(t, p, p2)
 
 	req.Interval = time.Hour
-	c2 := fakeChecker{req: req}
-
-	ok = checkers.add(target, &c2, time.Millisecond)
+	checkers.Add(req, l)
+	p2, ok = checkers.hostCheckers[req.Target]
 	assert.True(t, ok)
+	assert.NotEqual(t, p, p2)
 
-	assert.Eventually(t, func() bool {
-		return c2.running.Load()
-	}, time.Second, time.Millisecond)
-	assert.False(t, c1.running.Load())
-
-	c3 := fakeChecker{req: req}
-	ok = checkers.add(target, &c3, time.Millisecond)
+	checkers.Remove(req)
+	_, ok = checkers.hostCheckers[req.Target]
 	assert.False(t, ok)
-
-	checkers.remove(target)
-	assert.Eventually(t, func() bool {
-		return !c1.running.Load()
-	}, time.Second, time.Millisecond)
-}
-
-var _ checker = &fakeChecker{}
-
-type fakeChecker struct {
-	running atomic.Bool
-	req     Request
-}
-
-func (f *fakeChecker) Run(_ time.Duration) {
-	f.running.Store(true)
-}
-
-func (f *fakeChecker) Cancel() {
-	f.running.Store(false)
-}
-
-func (f *fakeChecker) GetRequest() Request {
-	return f.req
 }

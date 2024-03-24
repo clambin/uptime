@@ -18,7 +18,7 @@ spec:
     variables:
         - query:
             name: host
-            request: label_values(uptime_monitor_up,host)
+            request: label_values(uptime_monitor_target_up,host)
             include_all: true
             default_all: true
             hide: label
@@ -35,15 +35,16 @@ spec:
         - name: status
           panels:
             - stat:
-                title: ""
+                title: " "
                 span: 12
                 targets:
                     - prometheus:
-                        query: max by (host) (uptime_monitor_up)
+                        query: avg by (host) (uptime_monitor_target_up)
                         legend: '{{host}}'
                         ref: A
                         instant: true
                         interval_factor: 0
+                unit: percentunit
                 orientation: vertical
                 text: auto
                 value_type: last_non_null
@@ -59,12 +60,12 @@ spec:
                 span: 2
                 targets:
                     - prometheus:
-                        query: max by (host) (uptime_monitor_up{host=~"$host"})
+                        query: max by (host) (uptime_monitor_target_up{host=~"$host"})
                         legend: up
                         ref: A
                         interval_factor: 0
                     - prometheus:
-                        query: 1 - max by (host) (uptime_monitor_up{host=~"$host"})
+                        query: 1 - max by (host) (uptime_monitor_target_up{host=~"$host"})
                         legend: down
                         ref: B
                         interval_factor: 0
@@ -90,12 +91,12 @@ spec:
                 span: 8
                 targets:
                     - prometheus:
-                        query: avg by (host, code) (histogram_quantile($quantile, rate(uptime_monitor_latency_bucket{host=~"$host",component="client"}[1h])))
-                        legend: '{{code}} - $quantile'
+                        query: avg(histogram_quantile($quantile, rate(uptime_monitor_target_http_request_duration_seconds_bucket{host=~"$host"}[1h])))
+                        legend: '$quantile'
                     - prometheus:
-                          query: avg by (host, code) (histogram_quantile(0.5, rate(uptime_monitor_latency_bucket{host=~"$host",component="client"}[1h])))
-                          legend: '{{code}} - average'
-                legend: [hide]
+                          query: avg(histogram_quantile(0.5, rate(uptime_monitor_target_http_request_duration_seconds_bucket{host=~"$host"}[1h])))
+                          legend: 'average'
+                legend: [as_list, to_bottom]
                 visualization:
                     gradient_mode: none
                     tooltip: single_series
@@ -113,7 +114,7 @@ spec:
                 span: 2
                 targets:
                     - prometheus:
-                        query: uptime_monitor_certificate_expiry_days{host=~"$host"}
+                        query: uptime_monitor_target_certificate_expiry_days{host=~"$host"}
                         legend: __auto
                         ref: A
                         instant: true

@@ -2,6 +2,7 @@ package monitor
 
 import (
 	"github.com/clambin/go-common/set"
+	"github.com/clambin/uptime/internal/monitor/handlers"
 	"github.com/stretchr/testify/assert"
 	"log/slog"
 	"net/http"
@@ -43,7 +44,7 @@ func TestHostChecker_Up(t *testing.T) {
 			defer s.Close()
 
 			o := observer{}
-			r := Request{
+			r := handlers.Request{
 				Target:     strings.TrimPrefix(s.URL, "https://"),
 				Method:     http.MethodGet,
 				ValidCodes: set.New(tt.valid...),

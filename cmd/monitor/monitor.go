@@ -51,14 +51,15 @@ func main() {
 	httpClientMetrics := monitor.NewHTTPMetrics("uptime", "monitor_target", nil, clientMetricBuckets...)
 	prometheus.MustRegister(httpClientMetrics, serverMetrics, monitorMetrics)
 
-	h := http.Handler(
-		monitor.New(monitorMetrics, &http.Client{
+	h := monitor.New(
+		monitorMetrics,
+		&http.Client{
 			CheckRedirect: func(req *http.Request, via []*http.Request) error {
 				return http.ErrUseLastResponse
 			},
 			Transport: roundtripper.New(roundtripper.WithRequestMetrics(httpClientMetrics)),
 			Timeout:   monitor.DefaultClientTimeout,
-		}),
+		},
 	)
 
 	if *token != "" {

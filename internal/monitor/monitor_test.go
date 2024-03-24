@@ -3,6 +3,7 @@ package monitor_test
 import (
 	"bytes"
 	"github.com/clambin/uptime/internal/monitor"
+	"github.com/clambin/uptime/internal/monitor/handlers"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -22,7 +23,7 @@ func TestMonitor(t *testing.T) {
 
 	m := monitor.New(metrics, nil)
 
-	req := monitor.Request{Target: h.URL, Interval: 10 * time.Millisecond}
+	req := handlers.Request{Target: h.URL, Interval: 10 * time.Millisecond}
 	r, _ := http.NewRequest(http.MethodPost, "/target?"+req.Encode(), nil)
 	w := httptest.NewRecorder()
 
@@ -49,7 +50,7 @@ uptime_monitor_up{host="`+h.URL+`"} 0
 `), "uptime_monitor_up")
 	}, time.Second, 20*time.Millisecond)
 
-	req = monitor.Request{Target: h.URL}
+	req = handlers.Request{Target: h.URL}
 	r, _ = http.NewRequest(http.MethodDelete, "/target?"+req.Encode(), nil)
 	w = httptest.NewRecorder()
 

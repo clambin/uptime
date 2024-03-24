@@ -1,74 +1,26 @@
 package monitor
 
 import (
-	"github.com/clambin/uptime/pkg/logger"
+	"github.com/clambin/uptime/internal/monitor/handlers"
 	"net/http"
 	"time"
 )
 
-var _ http.Handler = &Monitor{}
-
-type Monitor struct {
-	http.Handler
-	metrics      *HostMetrics
-	httpClient   *http.Client
-	hostCheckers *hostCheckers
-}
-
 const DefaultClientTimeout = 10 * time.Second
 
-func New(metrics *HostMetrics, httpClient *http.Client) *Monitor {
+func New(metrics *HostMetrics, httpClient *http.Client) http.Handler {
 	if httpClient == nil {
 		httpClient = &http.Client{
 			Timeout: DefaultClientTimeout,
 		}
 	}
-	m := Monitor{
+
+	hc := hostCheckers{
 		metrics:      metrics,
 		httpClient:   httpClient,
-		hostCheckers: &hostCheckers{hostCheckers: make(map[string]checker)},
+		hostCheckers: make(map[string]*hostChecker),
 	}
-	m.Handler = m.makeHandler()
-
-	return &m
-}
-
-func (m *Monitor) makeHandler() http.Handler {
 	h := http.NewServeMux()
-	h.HandleFunc("POST /target", m.addTarget)
-	h.HandleFunc("DELETE /target", m.removeTarget)
-
+	h.Handle("/target", handlers.TargetHandler{TargetManager: &hc})
 	return h
-}
-
-func (m *Monitor) addTarget(w http.ResponseWriter, r *http.Request) {
-	l := logger.Logger(r)
-	req, err := ParseRequest(r)
-	if err != nil {
-		l.Error("invalid request", "err", err)
-		http.Error(w, "invalid request: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	h := newHostChecker(req, m.metrics, m.httpClient, l.With("target", req.Target))
-	if added := m.hostCheckers.add(req.Target, h, req.Interval); added {
-		l.Info("target added", "req", req)
-	}
-	w.WriteHeader(http.StatusOK)
-}
-
-func (m *Monitor) removeTarget(w http.ResponseWriter, r *http.Request) {
-	l := logger.Logger(r)
-
-	req, err := ParseRequest(r)
-	if err != nil {
-		l.Error("invalid request", "err", err)
-		w.Header().Set("Content-Type", "plain/text")
-		http.Error(w, "invalid request: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	m.hostCheckers.remove(req.Target)
-	l.Debug("target removed", "target", req.Target)
-	w.WriteHeader(http.StatusOK)
 }
