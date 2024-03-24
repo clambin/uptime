@@ -36,8 +36,7 @@ func main() {
 	l := slog.New(slog.NewJSONHandler(os.Stdout, &opts))
 
 	if *token == "" {
-		l.Error("no token provided")
-		return
+		l.Warn("no token provided")
 	}
 
 	http.Handle("/metrics", promhttp.Handler())
@@ -47,24 +46,34 @@ func main() {
 		}
 	}()
 
-	httpClientMetrics := metrics.NewRequestHistogramMetrics("uptime", "monitor_client", nil, clientMetricBuckets...)
 	serverMetrics := metrics.NewRequestSummaryMetrics("uptime", "monitor_server", nil)
-	monitorMetrics := monitor.NewHTTPMetrics("uptime", "monitor", nil)
+	monitorMetrics := monitor.NewHostMetrics("uptime", "monitor_target", nil)
+	httpClientMetrics := monitor.NewHTTPMetrics("uptime", "monitor_target", nil, clientMetricBuckets...)
 	prometheus.MustRegister(httpClientMetrics, serverMetrics, monitorMetrics)
+
+	h := http.Handler(
+		monitor.New(monitorMetrics, &http.Client{
+			CheckRedirect: func(req *http.Request, via []*http.Request) error {
+				return http.ErrUseLastResponse
+			},
+			Transport: roundtripper.New(roundtripper.WithRequestMetrics(httpClientMetrics)),
+			Timeout:   monitor.DefaultClientTimeout,
+		}),
+	)
+
+	if *token != "" {
+		h = auth.Authenticate(*token)(h)
+	}
 
 	s := http.Server{
 		Addr: *addr,
-		Handler: auth.Authenticate(*token)(
-			middleware.WithRequestMetrics(serverMetrics)(
-				logger.WithLogger(l)(
-					monitor.New(monitorMetrics, &http.Client{
-						Transport: roundtripper.New(roundtripper.WithRequestMetrics(httpClientMetrics)),
-						Timeout:   monitor.DefaultClientTimeout,
-					}),
-				),
+		Handler: middleware.WithRequestMetrics(serverMetrics)(
+			logger.WithLogger(l)(
+				h,
 			),
 		),
 	}
+
 	l.Info("starting uptime monitor", "version", version)
 	if err := s.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
 		panic(err)

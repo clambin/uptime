@@ -7,13 +7,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"log/slog"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 )
 
-func TestHTTPMetrics_Observe(t *testing.T) {
-	metrics := NewHTTPMetrics("uptime", "monitor", nil)
-	assert.NoError(t, testutil.CollectAndCompare(metrics, bytes.NewBufferString(``)))
+func TestHostMetrics_Observe(t *testing.T) {
+	metrics := NewHostMetrics("uptime", "monitor", nil)
+	assert.NoError(t, testutil.CollectAndCompare(metrics, strings.NewReader(``)))
 
 	metrics.Observe(HTTPMeasurement{
 		Host:      "localhost",
@@ -31,6 +32,29 @@ uptime_monitor_certificate_expiry_days{host="localhost"} 0.041666666666666664
 # HELP uptime_monitor_up site is up/down
 # TYPE uptime_monitor_up gauge
 uptime_monitor_up{host="localhost"} 1
+`)))
+}
+
+func TestHTTPMetrics_Observe(t *testing.T) {
+	metrics := NewHTTPMetrics("uptime", "monitor", nil, 0.1, 1, 10)
+	assert.NoError(t, testutil.CollectAndCompare(metrics, bytes.NewBufferString(``)))
+
+	req, _ := http.NewRequest(http.MethodGet, "https://localhost/foo", nil)
+	metrics.Measure(req, http.StatusOK, time.Second)
+
+	assert.NoError(t, testutil.CollectAndCompare(metrics, strings.NewReader(`
+# HELP uptime_monitor_http_request_duration_seconds duration of http requests
+# TYPE uptime_monitor_http_request_duration_seconds histogram
+uptime_monitor_http_request_duration_seconds_bucket{host="localhost",le="0.1"} 0
+uptime_monitor_http_request_duration_seconds_bucket{host="localhost",le="1"} 1
+uptime_monitor_http_request_duration_seconds_bucket{host="localhost",le="10"} 1
+uptime_monitor_http_request_duration_seconds_bucket{host="localhost",le="+Inf"} 1
+uptime_monitor_http_request_duration_seconds_sum{host="localhost"} 1
+uptime_monitor_http_request_duration_seconds_count{host="localhost"} 1
+
+# HELP uptime_monitor_http_requests_total total number of http requests
+# TYPE uptime_monitor_http_requests_total counter
+uptime_monitor_http_requests_total{code="200",host="localhost"} 1
 `)))
 }
 

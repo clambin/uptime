@@ -10,14 +10,14 @@ var _ http.Handler = &Monitor{}
 
 type Monitor struct {
 	http.Handler
-	metrics      *HTTPMetrics
+	metrics      *HostMetrics
 	httpClient   *http.Client
 	hostCheckers *hostCheckers
 }
 
 const DefaultClientTimeout = 10 * time.Second
 
-func New(metrics *HTTPMetrics, httpClient *http.Client) *Monitor {
+func New(metrics *HostMetrics, httpClient *http.Client) *Monitor {
 	if httpClient == nil {
 		httpClient = &http.Client{
 			Timeout: DefaultClientTimeout,

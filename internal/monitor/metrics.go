@@ -1,21 +1,23 @@
 package monitor
 
 import (
+	"github.com/clambin/go-common/http/metrics"
 	"github.com/prometheus/client_golang/prometheus"
 	"log/slog"
+	"net/http"
 	"strconv"
 	"time"
 )
 
-var _ prometheus.Collector = HTTPMetrics{}
+var _ prometheus.Collector = HostMetrics{}
 
-type HTTPMetrics struct {
+type HostMetrics struct {
 	up         *prometheus.GaugeVec
 	certExpiry *prometheus.GaugeVec
 }
 
-func NewHTTPMetrics(namespace, subsystem string, labels map[string]string) *HTTPMetrics {
-	return &HTTPMetrics{
+func NewHostMetrics(namespace, subsystem string, labels map[string]string) *HostMetrics {
+	return &HostMetrics{
 		up: prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Namespace:   namespace,
 			Subsystem:   subsystem,
@@ -38,22 +40,76 @@ var bool2int = map[bool]int{
 	false: 0,
 }
 
-func (m HTTPMetrics) Observe(measurement HTTPMeasurement) {
+func (m HostMetrics) Observe(measurement HTTPMeasurement) {
 	m.up.WithLabelValues(measurement.Host).Set(float64(bool2int[measurement.Up]))
 	if measurement.IsTLS {
 		m.certExpiry.WithLabelValues(measurement.Host).Set(measurement.TLSExpiry.Hours() / 24)
 	}
 }
 
-func (m HTTPMetrics) Describe(ch chan<- *prometheus.Desc) {
+func (m HostMetrics) Describe(ch chan<- *prometheus.Desc) {
 	m.up.Describe(ch)
 	m.certExpiry.Describe(ch)
 }
 
-func (m HTTPMetrics) Collect(ch chan<- prometheus.Metric) {
+func (m HostMetrics) Collect(ch chan<- prometheus.Metric) {
 	m.up.Collect(ch)
 	m.certExpiry.Collect(ch)
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+var _ metrics.RequestMetrics = &httpMetrics{}
+
+type httpMetrics struct {
+	requests *prometheus.CounterVec
+	duration *prometheus.HistogramVec
+}
+
+func NewHTTPMetrics(namespace, subsystem string, labels map[string]string, buckets ...float64) metrics.RequestMetrics {
+	if len(buckets) == 0 {
+		buckets = prometheus.DefBuckets
+	}
+	return &httpMetrics{
+		requests: prometheus.NewCounterVec(prometheus.CounterOpts{
+			Namespace:   namespace,
+			Subsystem:   subsystem,
+			Name:        metrics.RequestTotal,
+			Help:        "total number of http requests",
+			ConstLabels: labels,
+		},
+			[]string{"host", "code"},
+		),
+		duration: prometheus.NewHistogramVec(prometheus.HistogramOpts{
+			Namespace:   namespace,
+			Subsystem:   subsystem,
+			Name:        metrics.RequestsDuration,
+			Help:        "duration of http requests",
+			Buckets:     buckets,
+			ConstLabels: labels,
+		},
+			[]string{"host"},
+		),
+	}
+}
+
+func (h httpMetrics) Measure(req *http.Request, statusCode int, duration time.Duration) {
+	code := strconv.Itoa(statusCode)
+	h.requests.WithLabelValues(req.URL.Hostname(), code).Inc()
+	h.duration.WithLabelValues(req.URL.Hostname()).Observe(duration.Seconds())
+}
+
+func (h httpMetrics) Describe(ch chan<- *prometheus.Desc) {
+	h.requests.Describe(ch)
+	h.duration.Describe(ch)
+}
+
+func (h httpMetrics) Collect(ch chan<- prometheus.Metric) {
+	h.requests.Collect(ch)
+	h.duration.Collect(ch)
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 var _ slog.LogValuer = HTTPMeasurement{}
 
