@@ -3,6 +3,9 @@ package main
 import (
 	"errors"
 	"flag"
+	"github.com/clambin/go-common/http/metrics"
+	"github.com/clambin/go-common/http/middleware"
+	"github.com/clambin/go-common/http/roundtripper"
 	"github.com/clambin/uptime/internal/monitor"
 	"github.com/clambin/uptime/pkg/auth"
 	"github.com/clambin/uptime/pkg/logger"
@@ -19,6 +22,8 @@ var (
 	token    = flag.String("token", "", "Authorization token")
 	addr     = flag.String("addr", ":8080", "Listener port")
 	promAddr = flag.String("prom", ":9090", "Prometheus metrics port")
+
+	clientMetricBuckets = []float64{0.25, 0.5, 0.75, 1, 2, 5, 10}
 )
 
 func main() {
@@ -35,9 +40,6 @@ func main() {
 		return
 	}
 
-	metrics := monitor.NewHTTPMetrics()
-	prometheus.MustRegister(metrics)
-
 	http.Handle("/metrics", promhttp.Handler())
 	go func() {
 		if err := http.ListenAndServe(*promAddr, nil); !errors.Is(err, http.ErrServerClosed) {
@@ -45,11 +47,21 @@ func main() {
 		}
 	}()
 
+	httpClientMetrics := metrics.NewRequestHistogramMetrics("uptime", "monitor", map[string]string{"component": "client"}, clientMetricBuckets...)
+	serverMetrics := metrics.NewRequestSummaryMetrics("uptime", "monitor", map[string]string{"component": "server"})
+	monitorMetrics := monitor.NewHTTPMetrics()
+	prometheus.MustRegister(httpClientMetrics, serverMetrics, monitorMetrics)
+
 	s := http.Server{
 		Addr: *addr,
 		Handler: auth.Authenticate(*token)(
-			logger.WithLogger(l)(
-				monitor.New(metrics, nil),
+			middleware.WithRequestMetrics(serverMetrics)(
+				logger.WithLogger(l)(
+					monitor.New(monitorMetrics, &http.Client{
+						Transport: roundtripper.New(roundtripper.WithRequestMetrics(httpClientMetrics)),
+						Timeout:   monitor.DefaultClientTimeout,
+					}),
+				),
 			),
 		),
 	}

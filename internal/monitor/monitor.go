@@ -15,10 +15,12 @@ type Monitor struct {
 	hostCheckers *hostCheckers
 }
 
+const DefaultClientTimeout = 10 * time.Second
+
 func New(metrics *HTTPMetrics, httpClient *http.Client) *Monitor {
 	if httpClient == nil {
 		httpClient = &http.Client{
-			Timeout: 10 * time.Second,
+			Timeout: DefaultClientTimeout,
 		}
 	}
 	m := Monitor{

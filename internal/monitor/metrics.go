@@ -10,20 +10,12 @@ import (
 var _ prometheus.Collector = HTTPMetrics{}
 
 type HTTPMetrics struct {
-	latency    *prometheus.HistogramVec
 	up         *prometheus.GaugeVec
 	certExpiry *prometheus.GaugeVec
 }
 
 func NewHTTPMetrics() *HTTPMetrics {
 	return &HTTPMetrics{
-		latency: prometheus.NewHistogramVec(prometheus.HistogramOpts{
-			Namespace: "uptime",
-			Subsystem: "monitor",
-			Name:      "latency",
-			Help:      "site latency",
-			Buckets:   []float64{0.25, 0.5, 0.75, 1, 2, 4},
-		}, []string{"host", "code"}),
 		up: prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Namespace: "uptime",
 			Subsystem: "monitor",
@@ -46,9 +38,6 @@ var bool2int = map[bool]int{
 
 func (m HTTPMetrics) Observe(measurement HTTPMeasurement) {
 	m.up.WithLabelValues(measurement.Host).Set(float64(bool2int[measurement.Up]))
-	if measurement.Code > 0 {
-		m.latency.WithLabelValues(measurement.Host, strconv.Itoa(measurement.Code)).Observe(measurement.Latency.Seconds())
-	}
 	if measurement.IsTLS {
 		m.certExpiry.WithLabelValues(measurement.Host).Set(measurement.TLSExpiry.Hours() / 24)
 	}
@@ -56,13 +45,11 @@ func (m HTTPMetrics) Observe(measurement HTTPMeasurement) {
 
 func (m HTTPMetrics) Describe(ch chan<- *prometheus.Desc) {
 	m.up.Describe(ch)
-	m.latency.Describe(ch)
 	m.certExpiry.Describe(ch)
 }
 
 func (m HTTPMetrics) Collect(ch chan<- prometheus.Metric) {
 	m.up.Collect(ch)
-	m.latency.Collect(ch)
 	m.certExpiry.Collect(ch)
 }
 

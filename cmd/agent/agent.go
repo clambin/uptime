@@ -5,6 +5,8 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/clambin/go-common/http/metrics"
+	"github.com/clambin/go-common/http/roundtripper"
 	"github.com/clambin/uptime/internal/agent"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -58,9 +60,6 @@ func main() {
 		return
 	}
 
-	metrics := agent.NewMetrics()
-	prometheus.MustRegister(metrics)
-
 	http.Handle("/metrics", promhttp.Handler())
 	go func() {
 		if err := http.ListenAndServe(*promAddr, nil); !errors.Is(err, http.ErrServerClosed) {
@@ -68,7 +67,14 @@ func main() {
 		}
 	}()
 
-	a, err := agent.New(c, cfg, metrics, l)
+	httpMetrics := metrics.NewRequestSummaryMetrics("uptime", "agent", nil)
+	agentMetrics := agent.NewMetrics("uptime", "agent", nil)
+	prometheus.MustRegister(httpMetrics, agentMetrics)
+
+	httpClient := http.Client{
+		Transport: roundtripper.New(roundtripper.WithRequestMetrics(httpMetrics)),
+	}
+	a, err := agent.New(c, &httpClient, cfg, agentMetrics, l)
 	if err != nil {
 		l.Error("failed to start agent", "err", err)
 		return

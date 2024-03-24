@@ -101,6 +101,7 @@ func TestSender_Run(t *testing.T) {
 		logger:        slog.Default(),
 	}
 	c.configuration.Monitor = s.URL
+	c.configuration.Token = "1234"
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

@@ -3,6 +3,7 @@ module github.com/clambin/uptime
 go 1.22.1
 
 require (
+	github.com/clambin/go-common/http v0.4.1
 	github.com/clambin/go-common/set v0.4.3
 	github.com/prometheus/client_golang v1.19.0
 	github.com/stretchr/testify v1.9.0
@@ -15,6 +16,7 @@ require (
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
+	github.com/clambin/go-common/cache v0.2.2 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/emicklei/go-restful/v3 v3.11.0 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect

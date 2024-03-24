@@ -28,17 +28,6 @@ func TestHTTPMetrics_Observe(t *testing.T) {
 # HELP uptime_monitor_certificate_expiry_days number of days before the certificate expires
 # TYPE uptime_monitor_certificate_expiry_days gauge
 uptime_monitor_certificate_expiry_days{host="localhost"} 0.041666666666666664
-# HELP uptime_monitor_latency site latency
-# TYPE uptime_monitor_latency histogram
-uptime_monitor_latency_bucket{code="200",host="localhost",le="0.25"} 0
-uptime_monitor_latency_bucket{code="200",host="localhost",le="0.5"} 0
-uptime_monitor_latency_bucket{code="200",host="localhost",le="0.75"} 0
-uptime_monitor_latency_bucket{code="200",host="localhost",le="1"} 1
-uptime_monitor_latency_bucket{code="200",host="localhost",le="2"} 1
-uptime_monitor_latency_bucket{code="200",host="localhost",le="4"} 1
-uptime_monitor_latency_bucket{code="200",host="localhost",le="+Inf"} 1
-uptime_monitor_latency_sum{code="200",host="localhost"} 1
-uptime_monitor_latency_count{code="200",host="localhost"} 1
 # HELP uptime_monitor_up site is up/down
 # TYPE uptime_monitor_up gauge
 uptime_monitor_up{host="localhost"} 1
