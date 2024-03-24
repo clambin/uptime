@@ -3,6 +3,7 @@ package monitor
 import (
 	"github.com/clambin/go-common/set"
 	"github.com/clambin/uptime/internal/monitor/handlers"
+	"github.com/clambin/uptime/internal/monitor/metrics"
 	"github.com/stretchr/testify/assert"
 	"log/slog"
 	"net/http"
@@ -21,7 +22,7 @@ func TestHostCheckers(t *testing.T) {
 	l := slog.Default()
 
 	checkers := hostCheckers{
-		metrics:      NewHostMetrics("", "", nil),
+		metrics:      metrics.NewHostMetrics("", "", nil),
 		hostCheckers: make(map[string]*hostChecker),
 	}
 

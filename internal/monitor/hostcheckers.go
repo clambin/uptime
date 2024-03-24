@@ -2,13 +2,14 @@ package monitor
 
 import (
 	"github.com/clambin/uptime/internal/monitor/handlers"
+	metrics2 "github.com/clambin/uptime/internal/monitor/metrics"
 	"log/slog"
 	"net/http"
 	"sync"
 )
 
 type hostCheckers struct {
-	metrics      *HostMetrics
+	metrics      *metrics2.HostMetrics
 	httpClient   *http.Client
 	lock         sync.Mutex
 	hostCheckers map[string]*hostChecker

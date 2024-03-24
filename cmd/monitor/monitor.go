@@ -7,6 +7,7 @@ import (
 	"github.com/clambin/go-common/http/middleware"
 	"github.com/clambin/go-common/http/roundtripper"
 	"github.com/clambin/uptime/internal/monitor"
+	monitorMetrics "github.com/clambin/uptime/internal/monitor/metrics"
 	"github.com/clambin/uptime/pkg/auth"
 	"github.com/clambin/uptime/pkg/logger"
 	"github.com/prometheus/client_golang/prometheus"
@@ -47,12 +48,12 @@ func main() {
 	}()
 
 	serverMetrics := metrics.NewRequestSummaryMetrics("uptime", "monitor_server", nil)
-	monitorMetrics := monitor.NewHostMetrics("uptime", "monitor_target", nil)
-	httpClientMetrics := monitor.NewHTTPMetrics("uptime", "monitor_target", nil, clientMetricBuckets...)
-	prometheus.MustRegister(httpClientMetrics, serverMetrics, monitorMetrics)
+	monMetrics := monitorMetrics.NewHostMetrics("uptime", "monitor_target", nil)
+	httpClientMetrics := monitorMetrics.NewHTTPMetrics("uptime", "monitor_target", nil, clientMetricBuckets...)
+	prometheus.MustRegister(httpClientMetrics, serverMetrics, monMetrics)
 
 	h := monitor.New(
-		monitorMetrics,
+		monMetrics,
 		&http.Client{
 			CheckRedirect: func(req *http.Request, via []*http.Request) error {
 				return http.ErrUseLastResponse

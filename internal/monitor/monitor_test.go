@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"github.com/clambin/uptime/internal/monitor"
 	"github.com/clambin/uptime/internal/monitor/handlers"
+	"github.com/clambin/uptime/internal/monitor/metrics"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -18,7 +19,7 @@ func TestMonitor(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	metrics := monitor.NewHostMetrics("uptime", "monitor", nil)
+	metrics := metrics.NewHostMetrics("uptime", "monitor", nil)
 	assert.NoError(t, testutil.CollectAndCompare(metrics, bytes.NewBufferString(``)))
 
 	m := monitor.New(metrics, nil)

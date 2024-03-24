@@ -2,6 +2,7 @@ package monitor
 
 import (
 	"github.com/clambin/uptime/internal/monitor/handlers"
+	"github.com/clambin/uptime/internal/monitor/metrics"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -17,7 +18,7 @@ type hostChecker struct {
 }
 
 type HTTPObserver interface {
-	Observe(httpMetrics HTTPMeasurement)
+	Observe(httpMetrics metrics.HTTPMeasurement)
 }
 
 func newHostChecker(req handlers.Request, m HTTPObserver, c *http.Client, l *slog.Logger) *hostChecker {
@@ -54,8 +55,8 @@ func (h *hostChecker) Run(interval time.Duration) {
 	}
 }
 
-func (h *hostChecker) ping() HTTPMeasurement {
-	m := HTTPMeasurement{Host: h.req.Target}
+func (h *hostChecker) ping() metrics.HTTPMeasurement {
+	m := metrics.HTTPMeasurement{Host: h.req.Target}
 
 	target := h.req.Target
 	if !strings.HasPrefix(target, "https://") && !strings.HasPrefix(target, "http://") {
