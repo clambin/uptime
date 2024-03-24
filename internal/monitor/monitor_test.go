@@ -19,23 +19,23 @@ func TestMonitor(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	metrics := metrics.NewHostMetrics("uptime", "monitor", nil)
-	assert.NoError(t, testutil.CollectAndCompare(metrics, bytes.NewBufferString(``)))
+	hm := metrics.NewHostMetrics("uptime", "monitor", nil)
+	assert.NoError(t, testutil.CollectAndCompare(hm, bytes.NewBufferString(``)))
 
-	m := monitor.New(metrics, nil)
+	mon := monitor.New(hm, http.DefaultClient)
 
 	req := handlers.Request{Target: h.URL, Interval: 10 * time.Millisecond}
 	r, _ := http.NewRequest(http.MethodPost, "/target?"+req.Encode(), nil)
 	w := httptest.NewRecorder()
 
-	m.ServeHTTP(w, r)
+	mon.ServeHTTP(w, r)
 	require.Equal(t, http.StatusOK, w.Code)
 
 	assert.Eventually(t, func() bool {
-		return testutil.CollectAndCount(metrics) > 0
+		return testutil.CollectAndCount(hm) > 0
 	}, time.Second, 20*time.Millisecond)
 
-	assert.NoError(t, testutil.CollectAndCompare(metrics, bytes.NewBufferString(`
+	assert.NoError(t, testutil.CollectAndCompare(hm, bytes.NewBufferString(`
 # HELP uptime_monitor_up site is up/down
 # TYPE uptime_monitor_up gauge
 uptime_monitor_up{host="`+h.URL+`"} 1
@@ -44,7 +44,7 @@ uptime_monitor_up{host="`+h.URL+`"} 1
 	h.Close()
 
 	assert.Eventually(t, func() bool {
-		return nil == testutil.CollectAndCompare(metrics, bytes.NewBufferString(`
+		return nil == testutil.CollectAndCompare(hm, bytes.NewBufferString(`
 # HELP uptime_monitor_up site is up/down
 # TYPE uptime_monitor_up gauge
 uptime_monitor_up{host="`+h.URL+`"} 0
@@ -55,11 +55,11 @@ uptime_monitor_up{host="`+h.URL+`"} 0
 	r, _ = http.NewRequest(http.MethodDelete, "/target?"+req.Encode(), nil)
 	w = httptest.NewRecorder()
 
-	m.ServeHTTP(w, r)
+	mon.ServeHTTP(w, r)
 	require.Equal(t, http.StatusOK, w.Code)
 
 	// FIXME: deleted targets will continue to be reported on!
-	assert.NoError(t, testutil.CollectAndCompare(metrics, bytes.NewBufferString(`
+	assert.NoError(t, testutil.CollectAndCompare(hm, bytes.NewBufferString(`
 # HELP uptime_monitor_up site is up/down
 # TYPE uptime_monitor_up gauge
 uptime_monitor_up{host="`+h.URL+`"} 0

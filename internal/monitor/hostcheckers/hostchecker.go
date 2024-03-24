@@ -1,4 +1,4 @@
-package monitor
+package hostcheckers
 
 import (
 	"github.com/clambin/uptime/internal/monitor/handlers"

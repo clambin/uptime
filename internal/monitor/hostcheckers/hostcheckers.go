@@ -1,4 +1,4 @@
-package monitor
+package hostcheckers
 
 import (
 	"github.com/clambin/uptime/internal/monitor/handlers"
@@ -8,14 +8,22 @@ import (
 	"sync"
 )
 
-type hostCheckers struct {
-	metrics      *metrics2.HostMetrics
-	httpClient   *http.Client
+type HostCheckers struct {
+	Metrics      *metrics2.HostMetrics
+	HTTPClient   *http.Client
 	lock         sync.Mutex
 	hostCheckers map[string]*hostChecker
 }
 
-func (h *hostCheckers) Add(request handlers.Request, logger *slog.Logger) {
+func New(hostMetrics *metrics2.HostMetrics, httpClient *http.Client) *HostCheckers {
+	return &HostCheckers{
+		Metrics:      hostMetrics,
+		HTTPClient:   httpClient,
+		hostCheckers: make(map[string]*hostChecker),
+	}
+}
+
+func (h *HostCheckers) Add(request handlers.Request, logger *slog.Logger) {
 	h.lock.Lock()
 	defer h.lock.Unlock()
 
@@ -30,12 +38,12 @@ func (h *hostCheckers) Add(request handlers.Request, logger *slog.Logger) {
 	}
 
 	logger.Info("target added", "target", request)
-	hc := newHostChecker(request, h.metrics, h.httpClient, logger.With("target", request.Target))
+	hc := newHostChecker(request, h.Metrics, h.HTTPClient, logger.With("target", request.Target))
 	h.hostCheckers[request.Target] = hc
 	go hc.Run(request.Interval)
 }
 
-func (h *hostCheckers) Remove(request handlers.Request, logger *slog.Logger) {
+func (h *HostCheckers) Remove(request handlers.Request, logger *slog.Logger) {
 	h.lock.Lock()
 	defer h.lock.Unlock()
 

@@ -24,7 +24,7 @@ var (
 	addr     = flag.String("addr", ":8080", "Listener port")
 	promAddr = flag.String("prom", ":9090", "Prometheus metrics port")
 
-	clientMetricBuckets = []float64{0.25, 0.5, 0.75, 1, 2, 5, 10}
+	clientMetricBuckets = prometheus.DefBuckets
 )
 
 func main() {

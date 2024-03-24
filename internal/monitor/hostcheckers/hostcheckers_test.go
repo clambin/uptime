@@ -1,4 +1,4 @@
-package monitor
+package hostcheckers
 
 import (
 	"github.com/clambin/go-common/set"
@@ -21,8 +21,8 @@ func TestHostCheckers(t *testing.T) {
 	}
 	l := slog.Default()
 
-	checkers := hostCheckers{
-		metrics:      metrics.NewHostMetrics("", "", nil),
+	checkers := HostCheckers{
+		Metrics:      metrics.NewHostMetrics("", "", nil),
 		hostCheckers: make(map[string]*hostChecker),
 	}
 
