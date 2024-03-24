@@ -14,7 +14,7 @@ type TargetHandler struct {
 
 type TargetManager interface {
 	Add(Request, *slog.Logger)
-	Remove(Request)
+	Remove(Request, *slog.Logger)
 }
 
 func (t TargetHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -30,7 +30,7 @@ func (t TargetHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	case http.MethodPost:
 		t.Add(r, l)
 	case http.MethodDelete:
-		t.Remove(r)
+		t.Remove(r, l)
 	default:
 		http.Error(w, "invalid method: "+req.Method, http.StatusMethodNotAllowed)
 		return

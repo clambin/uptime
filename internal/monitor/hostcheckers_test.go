@@ -40,7 +40,7 @@ func TestHostCheckers(t *testing.T) {
 	assert.True(t, ok)
 	assert.NotEqual(t, p, p2)
 
-	checkers.Remove(req)
+	checkers.Remove(req, l)
 	_, ok = checkers.hostCheckers[req.Target]
 	assert.False(t, ok)
 }

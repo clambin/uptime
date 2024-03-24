@@ -52,7 +52,7 @@ func (m *mgr) Add(request handlers.Request, _ *slog.Logger) {
 	m.target[request.Target] = struct{}{}
 }
 
-func (m *mgr) Remove(request handlers.Request) {
+func (m *mgr) Remove(request handlers.Request, _ *slog.Logger) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	delete(m.target, request.Target)
