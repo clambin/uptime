@@ -94,8 +94,8 @@ spec:
                         query: avg(histogram_quantile($quantile, rate(uptime_monitor_target_http_request_duration_seconds_bucket{host=~"$host"}[1h])))
                         legend: '$quantile'
                     - prometheus:
-                          query: avg(histogram_quantile(0.5, rate(uptime_monitor_target_http_request_duration_seconds_bucket{host=~"$host"}[1h])))
-                          legend: 'average'
+                          query: avg by (host)(uptime_monitor_target_http_request_duration_seconds_sum{host=~"$host"} / uptime_monitor_target_http_request_duration_seconds_count)
+                          legend: average
                 legend: [as_list, to_bottom]
                 visualization:
                     gradient_mode: none
