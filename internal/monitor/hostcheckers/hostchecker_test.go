@@ -1,7 +1,9 @@
-package monitor
+package hostcheckers
 
 import (
 	"github.com/clambin/go-common/set"
+	"github.com/clambin/uptime/internal/monitor/handlers"
+	"github.com/clambin/uptime/internal/monitor/metrics"
 	"github.com/stretchr/testify/assert"
 	"log/slog"
 	"net/http"
@@ -43,7 +45,7 @@ func TestHostChecker_Up(t *testing.T) {
 			defer s.Close()
 
 			o := observer{}
-			r := Request{
+			r := handlers.Request{
 				Target:     strings.TrimPrefix(s.URL, "https://"),
 				Method:     http.MethodGet,
 				ValidCodes: set.New(tt.valid...),
@@ -52,7 +54,7 @@ func TestHostChecker_Up(t *testing.T) {
 			assert.Equal(t, r, h.GetRequest())
 			go h.Run(10 * time.Millisecond)
 
-			var m HTTPMeasurement
+			var m metrics.HTTPMeasurement
 			var ok bool
 			assert.Eventually(t, func() bool {
 				m, ok = o.result()
@@ -71,19 +73,19 @@ func TestHostChecker_Up(t *testing.T) {
 var _ HTTPObserver = &observer{}
 
 type observer struct {
-	observation HTTPMeasurement
+	observation metrics.HTTPMeasurement
 	received    bool
 	lock        sync.Mutex
 }
 
-func (o *observer) Observe(httpMetrics HTTPMeasurement) {
+func (o *observer) Observe(httpMetrics metrics.HTTPMeasurement) {
 	o.lock.Lock()
 	defer o.lock.Unlock()
 	o.observation = httpMetrics
 	o.received = true
 }
 
-func (o *observer) result() (HTTPMeasurement, bool) {
+func (o *observer) result() (metrics.HTTPMeasurement, bool) {
 	o.lock.Lock()
 	defer o.lock.Unlock()
 	return o.observation, o.received

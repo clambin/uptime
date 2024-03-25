@@ -1,72 +1,17 @@
 package monitor
 
 import (
-	"github.com/clambin/uptime/pkg/logger"
+	"github.com/clambin/uptime/internal/monitor/handlers"
+	"github.com/clambin/uptime/internal/monitor/hostcheckers"
+	"github.com/clambin/uptime/internal/monitor/metrics"
 	"net/http"
 	"time"
 )
 
-var _ http.Handler = &Monitor{}
+const DefaultClientTimeout = 10 * time.Second
 
-type Monitor struct {
-	http.Handler
-	metrics      *HTTPMetrics
-	httpClient   *http.Client
-	hostCheckers *hostCheckers
-}
-
-func New(metrics *HTTPMetrics, httpClient *http.Client) *Monitor {
-	if httpClient == nil {
-		httpClient = &http.Client{
-			Timeout: 10 * time.Second,
-		}
-	}
-	m := Monitor{
-		metrics:      metrics,
-		httpClient:   httpClient,
-		hostCheckers: &hostCheckers{hostCheckers: make(map[string]checker)},
-	}
-	m.Handler = m.makeHandler()
-
-	return &m
-}
-
-func (m *Monitor) makeHandler() http.Handler {
+func New(metrics *metrics.HostMetrics, httpClient *http.Client) http.Handler {
 	h := http.NewServeMux()
-	h.HandleFunc("POST /target", m.addTarget)
-	h.HandleFunc("DELETE /target", m.removeTarget)
-
+	h.Handle("/target", handlers.TargetHandler{TargetManager: hostcheckers.New(metrics, httpClient)})
 	return h
-}
-
-func (m *Monitor) addTarget(w http.ResponseWriter, r *http.Request) {
-	l := logger.Logger(r)
-	req, err := ParseRequest(r)
-	if err != nil {
-		l.Error("invalid request", "err", err)
-		http.Error(w, "invalid request: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	h := newHostChecker(req, m.metrics, m.httpClient, l.With("target", req.Target))
-	if added := m.hostCheckers.add(req.Target, h, req.Interval); added {
-		l.Info("target added", "req", req)
-	}
-	w.WriteHeader(http.StatusOK)
-}
-
-func (m *Monitor) removeTarget(w http.ResponseWriter, r *http.Request) {
-	l := logger.Logger(r)
-
-	req, err := ParseRequest(r)
-	if err != nil {
-		l.Error("invalid request", "err", err)
-		w.Header().Set("Content-Type", "plain/text")
-		http.Error(w, "invalid request: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	m.hostCheckers.remove(req.Target)
-	l.Debug("target removed", "target", req.Target)
-	w.WriteHeader(http.StatusOK)
 }

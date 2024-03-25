@@ -1,16 +1,16 @@
-package monitor
+package hostcheckers
 
 import (
+	"github.com/clambin/uptime/internal/monitor/handlers"
+	"github.com/clambin/uptime/internal/monitor/metrics"
 	"log/slog"
 	"net/http"
 	"strings"
 	"time"
 )
 
-var _ checker = &hostChecker{}
-
 type hostChecker struct {
-	req        Request
+	req        handlers.Request
 	httpClient *http.Client
 	metrics    HTTPObserver
 	shutdown   chan struct{}
@@ -18,10 +18,10 @@ type hostChecker struct {
 }
 
 type HTTPObserver interface {
-	Observe(httpMetrics HTTPMeasurement)
+	Observe(httpMetrics metrics.HTTPMeasurement)
 }
 
-func newHostChecker(req Request, m HTTPObserver, c *http.Client, l *slog.Logger) *hostChecker {
+func newHostChecker(req handlers.Request, m HTTPObserver, c *http.Client, l *slog.Logger) *hostChecker {
 	if c == nil {
 		c = http.DefaultClient
 	}
@@ -38,7 +38,7 @@ func (h *hostChecker) Cancel() {
 	h.shutdown <- struct{}{}
 }
 
-func (h *hostChecker) GetRequest() Request {
+func (h *hostChecker) GetRequest() handlers.Request {
 	return h.req
 }
 
@@ -55,8 +55,8 @@ func (h *hostChecker) Run(interval time.Duration) {
 	}
 }
 
-func (h *hostChecker) ping() HTTPMeasurement {
-	m := HTTPMeasurement{Host: h.req.Target}
+func (h *hostChecker) ping() metrics.HTTPMeasurement {
+	m := metrics.HTTPMeasurement{Host: h.req.Target}
 
 	target := h.req.Target
 	if !strings.HasPrefix(target, "https://") && !strings.HasPrefix(target, "http://") {

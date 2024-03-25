@@ -1,4 +1,4 @@
-package monitor
+package handlers
 
 import (
 	"bytes"
@@ -141,4 +141,51 @@ func TestRequest_LogValue(t *testing.T) {
 
 	assert.Equal(t, `level=INFO msg=request req.target=http://localhost req.method=HEAD req.codes=[200] req.interval=1m0s
 `, output.String())
+}
+
+func TestRequest_Equals(t *testing.T) {
+	tests := []struct {
+		name   string
+		left   Request
+		right  Request
+		wantOK assert.BoolAssertionFunc
+	}{
+		{
+			name:   "equal",
+			left:   Request{Target: "http://localhost:8080", Method: http.MethodGet, ValidCodes: set.New(http.StatusOK), Interval: time.Hour},
+			right:  Request{Target: "http://localhost:8080", Method: http.MethodGet, ValidCodes: set.New(http.StatusOK), Interval: time.Hour},
+			wantOK: assert.True,
+		},
+		{
+			name:   "different target",
+			left:   Request{Target: "http://localhost:8080", Method: http.MethodGet, ValidCodes: set.New(http.StatusOK), Interval: time.Hour},
+			right:  Request{Target: "http://localhost", Method: http.MethodGet, ValidCodes: set.New(http.StatusOK), Interval: time.Hour},
+			wantOK: assert.False,
+		},
+		{
+			name:   "different method",
+			left:   Request{Target: "http://localhost:8080", Method: http.MethodGet, ValidCodes: set.New(http.StatusOK), Interval: time.Hour},
+			right:  Request{Target: "http://localhost:8080", Method: http.MethodHead, ValidCodes: set.New(http.StatusOK), Interval: time.Hour},
+			wantOK: assert.False,
+		},
+		{
+			name:   "different statusCode",
+			left:   Request{Target: "http://localhost:8080", Method: http.MethodGet, ValidCodes: set.New(http.StatusOK), Interval: time.Hour},
+			right:  Request{Target: "http://localhost:8080", Method: http.MethodGet, ValidCodes: set.New(http.StatusTemporaryRedirect), Interval: time.Hour},
+			wantOK: assert.False,
+		},
+		{
+			name:   "different interval",
+			left:   Request{Target: "http://localhost:8080", Method: http.MethodGet, ValidCodes: set.New(http.StatusOK), Interval: time.Hour},
+			right:  Request{Target: "http://localhost:8080", Method: http.MethodGet, ValidCodes: set.New(http.StatusOK), Interval: time.Minute},
+			wantOK: assert.False,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			tt.wantOK(t, tt.left.Equals(tt.right))
+		})
+	}
 }
