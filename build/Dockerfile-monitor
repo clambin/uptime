@@ -15,7 +15,7 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
     -o uptime-monitor \
     cmd/monitor/monitor.go
 
-FOM alpine
+FROM alpine
 
 WORKDIR /app
 COPY --from=builder /app/uptime-monitor /app/uptime-monitor
