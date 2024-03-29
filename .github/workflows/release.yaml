@@ -18,12 +18,11 @@ jobs:
         cmd:
           - agent
           - monitor
-    uses: clambin/workflows/.github/workflows/build.yaml@main
+    uses: clambin/workflows/.github/workflows/build.yaml@docker
     with:
-      target: ${{ matrix.cmd }}
-      image: uptime-${{ matrix.cmd }}
+      image: ghcr.io/clambin/uptime-${{ matrix.cmd }}
       dockerfile: build/Dockerfile-${{ matrix.cmd }}
   release:
     needs:
       - build
-    uses: clambin/workflows/.github/workflows/release.yaml@main
+    uses: clambin/workflows/.github/workflows/release.yaml@docker

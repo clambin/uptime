@@ -1,12 +1,28 @@
-FROM alpine
+FROM --platform=${BUILDPLATFORM:-linux/amd64} golang:1.22 as builder
 
-WORKDIR /app
-
+ARG TARGETPLATFORM
+ARG BUILDPLATFORM
 ARG TARGETOS
 ARG TARGETARCH
+ARG VERSION
+ENV VERSION=$VERSION
 
-COPY bld/monitor-$TARGETOS-$TARGETARCH /app/monitor
+WORKDIR /app/
+ADD . .
+RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
+    go build \
+    -ldflags="-X main.version=$VERSION" \
+    -o uptime-monitor \
+    cmd/monitor/monitor.go
 
-EXPOSE 8080
-ENTRYPOINT ["/app/monitor"]
+FOM alpine
+
+WORKDIR /app
+COPY --from=builder /app/uptime-monitor /app/uptime-monitor
+
+RUN /usr/sbin/addgroup app
+RUN /usr/sbin/adduser app -G app -D
+USER app
+
+ENTRYPOINT ["/app/uptime-monitor"]
 CMD []
