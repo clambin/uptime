@@ -19,7 +19,7 @@ jobs:
         cmd:
           - agent
           - monitor
-    uses: clambin/workflows/.github/workflows/build.yaml@docker
+    uses: clambin/workflows/.github/workflows/build.yaml@main
     with:
       image: ghcr.io/clambin/uptime-${{ matrix.cmd }}
       dockerfile: build/Dockerfile-${{ matrix.cmd }}
